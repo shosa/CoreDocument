@@ -1,0 +1,35 @@
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+dist
+build
+
+# Environment files (exclude ALL .env files from Docker builds)
+.env
+.env.*
+!.env.example
+apps/**/.env
+apps/**/.env.*
+!apps/**/.env.example
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Prisma
+apps/backend/prisma/migrations
+
+# Build artifacts
+apps/backend/dist
+apps/frontend/.next
+apps/frontend/out

@@ -1,0 +1,307 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  Box,
+  Button,
+  TextField,
+  MenuItem,
+  Grid,
+  CircularProgress,
+} from '@mui/material';
+import { Save, ArrowBack } from '@mui/icons-material';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import PageHeader from '@/components/PageHeader';
+import Widget from '@/components/Widget';
+import axiosInstance from '@/lib/axios';
+import { useSnackbar } from 'notistack';
+import { MachineFormData, Type, Machine } from '@/types';
+
+const schema = yup.object({
+  typeId: yup.string().required('Tipo richiesto'),
+  serialNumber: yup.string().required('Matricola richiesta'),
+  description: yup.string(),
+  manufacturer: yup.string(),
+  model: yup.string(),
+  yearBuilt: yup.number().nullable().transform((v, o) => (o === '' ? null : v)),
+  purchaseDate: yup.string(),
+  dealer: yup.string(),
+  invoiceReference: yup.string(),
+  documentLocation: yup.string(),
+});
+
+export default function EditMachinePage() {
+  const params = useParams();
+  const router = useRouter();
+  const { enqueueSnackbar } = useSnackbar();
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [types, setTypes] = useState<Type[]>([]);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<MachineFormData>({
+    resolver: yupResolver(schema),
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, [params.id]);
+
+  const fetchData = async () => {
+    try {
+      setInitialLoading(true);
+      const [machineRes, typesRes] = await Promise.all([
+        axiosInstance.get<Machine>(`/machines/${params.id}`),
+        axiosInstance.get('/types'),
+      ]);
+
+      const machine = machineRes.data;
+      reset({
+        typeId: machine.typeId,
+        serialNumber: machine.serialNumber,
+        description: machine.description || '',
+        manufacturer: machine.manufacturer || '',
+        model: machine.model || '',
+        yearBuilt: machine.yearBuilt || undefined,
+        purchaseDate: machine.purchaseDate || '',
+        dealer: machine.dealer || '',
+        invoiceReference: machine.invoiceReference || '',
+      });
+
+      setTypes(typesRes.data.data || typesRes.data);
+    } catch (error: any) {
+      enqueueSnackbar('Errore nel caricamento dei dati', { variant: 'error' });
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  const onSubmit = async (data: MachineFormData) => {
+    try {
+      setLoading(true);
+      await axiosInstance.patch(`/machines/${params.id}`, data);
+      enqueueSnackbar('Macchinario aggiornato con successo', { variant: 'success' });
+      router.push(`/machines/${params.id}`);
+    } catch (error: any) {
+      enqueueSnackbar('Errore durante l\'aggiornamento', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (initialLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <PageHeader
+        title="Modifica Macchinario"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Macchinari', href: '/machines' },
+          { label: 'Modifica' },
+        ]}
+      />
+
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Widget>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="typeId"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    select
+                    label="Tipo *"
+                    error={!!errors.typeId}
+                    helperText={errors.typeId?.message}
+                  >
+                    {types.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {type.name} ({type.category?.name})
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="serialNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Matricola *"
+                    error={!!errors.serialNumber}
+                    helperText={errors.serialNumber?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Descrizione"
+                    multiline
+                    rows={3}
+                    error={!!errors.description}
+                    helperText={errors.description?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="manufacturer"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Produttore"
+                    error={!!errors.manufacturer}
+                    helperText={errors.manufacturer?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="model"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Modello"
+                    error={!!errors.model}
+                    helperText={errors.model?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="yearBuilt"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Anno di Costruzione"
+                    type="number"
+                    error={!!errors.yearBuilt}
+                    helperText={errors.yearBuilt?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="purchaseDate"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Data di Acquisto"
+                    type="date"
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.purchaseDate}
+                    helperText={errors.purchaseDate?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="dealer"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Rivenditore"
+                    error={!!errors.dealer}
+                    helperText={errors.dealer?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="invoiceReference"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Riferimento Fattura"
+                    error={!!errors.invoiceReference}
+                    helperText={errors.invoiceReference?.message}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Controller
+                name="documentLocation"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Locazione Documenti"
+                    error={!!errors.documentLocation}
+                    helperText={errors.documentLocation?.message}
+                  />
+                )}
+              />
+            </Grid>
+          </Grid>
+
+          <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBack />}
+              onClick={() => router.push(`/machines/${params.id}`)}
+              disabled={loading}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+              disabled={loading}
+            >
+              Salva
+            </Button>
+          </Box>
+        </Widget>
+      </form>
+    </Box>
+  );
+}

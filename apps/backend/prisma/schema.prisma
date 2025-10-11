@@ -1,0 +1,70 @@
+// Prisma schema per CoreDocument
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites Favorite[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Document {
+  id             Int      @id @default(autoincrement())
+  filename       String   @db.VarChar(255)
+  minioKey       String   @unique @db.VarChar(500) // Chiave MinIO invece di filepath
+  supplier       String   @db.VarChar(100)
+  docNumber      String   @db.VarChar(50)
+  date           DateTime @db.Date
+  month          String   @db.VarChar(20)
+  year           Int
+  fileSize       BigInt   // Dimensione in bytes
+  fileExtension  String   @db.VarChar(10)
+  meilisearchId  String?  @db.VarChar(100) // ID in Meilisearch
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  favorites Favorite[]
+
+  @@index([supplier])
+  @@index([docNumber])
+  @@index([date])
+  @@index([month])
+  @@index([year])
+  @@map("documents")
+}
+
+model Favorite {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  documentId Int
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId])
+  @@index([documentId])
+  @@map("favorites")
+}

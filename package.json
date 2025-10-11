@@ -1,0 +1,20 @@
+{
+  "name": "coredocument",
+  "version": "1.0.0",
+  "description": "Sistema di gestione documentale arrivo merce",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=@coredocument/backend",
+    "dev:frontend": "npm run dev --workspace=@coredocument/frontend",
+    "build:backend": "npm run build --workspace=@coredocument/backend",
+    "build:frontend": "npm run build --workspace=@coredocument/frontend",
+    "start:backend": "npm run start --workspace=@coredocument/backend",
+    "start:frontend": "npm run start --workspace=@coredocument/frontend"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.2"
+  }
+}
