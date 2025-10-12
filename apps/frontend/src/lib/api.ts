@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+// In produzione con nginx, usa il path relativo /api
+// In sviluppo locale senza nginx, usa http://localhost:3002/api
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -49,26 +51,29 @@ export const authApi = {
 // Documents API
 export const documentsApi = {
   list: (params?: any) => api.get('/documents', { params }),
-  get: (id: number) => api.get(`/documents/${id}`),
+  get: (id: string) => api.get(`/documents/${id}`),
   create: (data: FormData) => api.post('/documents', data, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  update: (id: number, data: any) => api.patch(`/documents/${id}`, data),
-  delete: (id: number) => api.delete(`/documents/${id}`),
-  download: (id: number) => api.get(`/documents/${id}/download`, {
+  bulkUpload: (data: FormData) => api.post('/documents/bulk-upload', data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  update: (id: string, data: any) => api.patch(`/documents/${id}`, data),
+  delete: (id: string) => api.delete(`/documents/${id}`),
+  download: (id: string) => api.get(`/documents/${id}/download`, {
     responseType: 'blob'
   }),
-  getDownloadUrl: (id: number) => api.get(`/documents/${id}/download-url`),
+  getDownloadUrl: (id: string) => api.get(`/documents/${id}/download-url`),
   search: (query: string) => api.get('/search', { params: { query } }),
 };
 
 // Favorites API
 export const favoritesApi = {
   list: (params?: any) => api.get('/favorites', { params }),
-  add: (documentId: number) => api.post('/favorites', { documentId }),
-  remove: (documentId: number) => api.delete(`/favorites/${documentId}`),
-  toggle: (documentId: number) => api.post(`/favorites/${documentId}/toggle`),
-  check: (documentId: number) => api.get(`/favorites/${documentId}/check`),
+  add: (documentId: string) => api.post('/favorites', { documentId }),
+  remove: (documentId: string) => api.delete(`/favorites/${documentId}`),
+  toggle: (documentId: string) => api.post(`/favorites/${documentId}/toggle`),
+  check: (documentId: string) => api.get(`/favorites/${documentId}/check`),
 };
 
 // Search API

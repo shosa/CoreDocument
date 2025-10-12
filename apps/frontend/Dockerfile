@@ -27,9 +27,8 @@ RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Copy dependencies from deps stage
+# Copy dependencies from deps stage (workspaces install tutto in root)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
 
 # Copy root workspace config
 COPY package.json package-lock.json* ./

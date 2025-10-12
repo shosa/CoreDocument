@@ -9,11 +9,12 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   Query,
   Res,
   StreamableFile,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
@@ -35,6 +36,17 @@ export class DocumentsController {
     return this.documentsService.create(createDocumentDto, file);
   }
 
+  @Post('bulk-upload')
+  @UseInterceptors(FilesInterceptor('files', 50)) // Max 50 files
+  async bulkUpload(
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    // body.metadata è un JSON string con array di metadati per ogni file
+    const metadata = JSON.parse(body.metadata || '[]');
+    return this.documentsService.bulkCreate(files, metadata);
+  }
+
   @Get()
   async findAll(@Query() query: QueryDocumentDto) {
     return this.documentsService.findAll(query);
@@ -42,7 +54,7 @@ export class DocumentsController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.documentsService.findOne(+id);
+    return this.documentsService.findOne(id);
   }
 
   @Patch(':id')
@@ -50,22 +62,22 @@ export class DocumentsController {
     @Param('id') id: string,
     @Body() updateDocumentDto: UpdateDocumentDto,
   ) {
-    return this.documentsService.update(+id, updateDocumentDto);
+    return this.documentsService.update(id, updateDocumentDto);
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return this.documentsService.remove(+id);
+    return this.documentsService.remove(id);
   }
 
   @Get(':id/download-url')
   async getDownloadUrl(@Param('id') id: string) {
-    return this.documentsService.getDownloadUrl(+id);
+    return this.documentsService.getDownloadUrl(id);
   }
 
   @Get(':id/download')
   async download(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
-    const { stream, fileName } = await this.documentsService.getFileStream(+id);
+    const { stream, fileName } = await this.documentsService.getFileStream(id);
 
     res.set({
       'Content-Type': 'application/octet-stream',

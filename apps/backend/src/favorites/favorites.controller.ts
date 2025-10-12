@@ -39,16 +39,16 @@ export class FavoritesController {
 
   @Delete(':documentId')
   async remove(@CurrentUser() user: any, @Param('documentId') documentId: string) {
-    return this.favoritesService.remove(user.id, +documentId);
+    return this.favoritesService.remove(user.id, documentId);
   }
 
   @Post(':documentId/toggle')
   async toggle(@CurrentUser() user: any, @Param('documentId') documentId: string) {
-    return this.favoritesService.toggle(user.id, +documentId);
+    return this.favoritesService.toggle(user.id, documentId);
   }
 
   @Get(':documentId/check')
   async check(@CurrentUser() user: any, @Param('documentId') documentId: string) {
-    return this.favoritesService.isFavorite(user.id, +documentId);
+    return this.favoritesService.isFavorite(user.id, documentId);
   }
 }

@@ -10,28 +10,28 @@ services:
     container_name: coredocument-backend
     restart: unless-stopped
     environment:
-      # Database - usa il MySQL condiviso
-      DATABASE_URL: mysql://${MYSQL_USER:-coredocument}:${MYSQL_PASSWORD:-password}@mysql:3306/${MYSQL_DATABASE:-coredocument}
+      # Database - usa il MySQL condiviso (in Docker usa 'mysql' come host)
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
 
       # JWT
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
 
-      # MinIO - usa il MinIO condiviso
+      # MinIO - usa il MinIO condiviso (in Docker usa 'minio' come host)
       MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_USE_SSL: "false"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      MINIO_BUCKET_NAME: coredocument-files
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
 
-      # Meilisearch - usa il Meilisearch condiviso
+      # Meilisearch - usa il Meilisearch condiviso (in Docker usa 'meilisearch' come host)
       MEILISEARCH_HOST: http://meilisearch:7700
-      MEILISEARCH_API_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeThis}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
 
       # App
-      APP_PORT: 3002
-      APP_URL: ${APP_URL:-http://localhost}
+      APP_PORT: ${APP_PORT}
+      APP_URL: ${APP_URL}
       NODE_ENV: production
     ports:
       - "3002:3002"
@@ -45,11 +45,11 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:81/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: coredocument-frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:81/api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NODE_ENV: production
     ports:
       - "3003:3000"

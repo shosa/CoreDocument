@@ -36,24 +36,41 @@ export class MinioService implements OnModuleInit {
   /**
    * Upload a document file to MinIO
    * Path structure: documents/{year}/{month}/{day}/{filename}
+   * Filename format: fornitore numero.ext
    */
   async uploadDocument(
     file: Express.Multer.File,
     date: Date,
+    supplier?: string,
+    docNumber?: string,
   ): Promise<{ filePath: string; fileName: string }> {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
 
-    const timestamp = Date.now();
-    const fileName = `${timestamp}-${file.originalname}`;
+    // Estrai l'estensione del file originale
+    const fileExtension = file.originalname.split('.').pop() || 'pdf';
+
+    // Crea il nome file nel formato: fornitore numero.ext
+    let fileName: string;
+    if (supplier && docNumber) {
+      // Rimuovi caratteri non validi per i nomi file
+      const cleanSupplier = supplier.replace(/[^a-zA-Z0-9]/g, '_');
+      const cleanDocNumber = docNumber.replace(/[^a-zA-Z0-9-]/g, '_');
+      fileName = `${cleanSupplier} ${cleanDocNumber}.${fileExtension}`;
+    } else {
+      // Fallback al nome originale con timestamp se mancano i metadati
+      const timestamp = Date.now();
+      fileName = `${timestamp}-${file.originalname}`;
+    }
+
     const filePath = `documents/${year}/${month}/${day}/${fileName}`;
 
     await this.client.putObject(this.bucketName, filePath, file.buffer, file.size, {
       'Content-Type': file.mimetype,
     });
 
-    return { filePath, fileName: file.originalname };
+    return { filePath, fileName };
   }
 
   async deleteFile(filePath: string): Promise<void> {

@@ -17,6 +17,10 @@ import {
   MenuItem,
   Chip,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Add,
@@ -28,6 +32,7 @@ import {
   FilterList,
   Star,
   StarBorder,
+  Visibility,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import PageHeader from '@/components/PageHeader';
@@ -40,7 +45,7 @@ import { it } from 'date-fns/locale';
 type ViewMode = 'grid' | 'table';
 
 interface Document {
-  id: number;
+  id: string;
   filename: string;
   supplier: string;
   docNumber: string;
@@ -62,6 +67,8 @@ export default function DocumentsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -83,7 +90,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Sei sicuro di voler eliminare questo documento?')) return;
     try {
       await documentsApi.delete(id);
@@ -94,7 +101,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDownload = async (id: number) => {
+  const handleDownload = async (id: string) => {
     try {
       const response = await documentsApi.download(id);
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -111,7 +118,7 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleToggleFavorite = async (id: number) => {
+  const handleToggleFavorite = async (id: string) => {
     try {
       await favoritesApi.toggle(id);
       fetchDocuments();
@@ -119,6 +126,21 @@ export default function DocumentsPage() {
     } catch (error) {
       enqueueSnackbar('Errore', { variant: 'error' });
     }
+  };
+
+  const handlePreview = async (doc: Document) => {
+    try {
+      setPreviewDoc(doc);
+      const response = await documentsApi.getDownloadUrl(doc.id);
+      setPreviewUrl(response.data.url);
+    } catch (error) {
+      enqueueSnackbar('Errore nel caricamento anteprima', { variant: 'error' });
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewDoc(null);
+    setPreviewUrl(null);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -174,7 +196,7 @@ export default function DocumentsPage() {
     {
       field: 'actions',
       headerName: 'Azioni',
-      width: 150,
+      width: 200,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '100%' }}>
@@ -184,6 +206,19 @@ export default function DocumentsPage() {
             title={params.row.isFavorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}
           >
             {params.row.isFavorite ? <Star color="primary" fontSize="small" /> : <StarBorder fontSize="small" />}
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handlePreview(params.row)}
+            title="Anteprima"
+            sx={{
+              bgcolor: 'black',
+              color: 'white',
+              borderRadius: '6px',
+              '&:hover': { bgcolor: 'grey.800' },
+            }}
+          >
+            <Visibility fontSize="small" />
           </IconButton>
           <IconButton
             size="small"
@@ -357,6 +392,9 @@ export default function DocumentsPage() {
                     <IconButton size="small" onClick={() => handleToggleFavorite(doc.id)}>
                       {doc.isFavorite ? <Star color="primary" /> : <StarBorder />}
                     </IconButton>
+                    <IconButton size="small" onClick={() => handlePreview(doc)}>
+                      <Visibility />
+                    </IconButton>
                     <IconButton size="small" onClick={() => handleDownload(doc.id)}>
                       <Download />
                     </IconButton>
@@ -376,6 +414,48 @@ export default function DocumentsPage() {
           </Box>
         )}
       </Widget>
+
+      {/* Modale Anteprima Documento */}
+      <Dialog
+        open={!!previewDoc}
+        onClose={handleClosePreview}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Anteprima: {previewDoc?.filename}
+        </DialogTitle>
+        <DialogContent>
+          {previewUrl ? (
+            <Box sx={{ width: '100%', height: '70vh' }}>
+              <iframe
+                src={previewUrl}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="Anteprima documento"
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePreview}>Chiudi</Button>
+          {previewDoc && (
+            <Button
+              variant="contained"
+              startIcon={<Download />}
+              onClick={() => {
+                handleDownload(previewDoc.id);
+                handleClosePreview();
+              }}
+            >
+              Scarica
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

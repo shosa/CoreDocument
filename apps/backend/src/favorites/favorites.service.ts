@@ -6,7 +6,7 @@ import { CreateFavoriteDto } from './dto/create-favorite.dto';
 export class FavoritesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: number, createFavoriteDto: CreateFavoriteDto) {
+  async create(userId: string, createFavoriteDto: CreateFavoriteDto) {
     // Check if document exists
     const document = await this.prisma.document.findUnique({
       where: { id: createFavoriteDto.documentId },
@@ -43,7 +43,7 @@ export class FavoritesService {
     return favorite;
   }
 
-  async findAllByUser(userId: number, page: number = 1, limit: number = 20) {
+  async findAllByUser(userId: string, page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
     const [favorites, total] = await Promise.all([
@@ -70,7 +70,7 @@ export class FavoritesService {
     };
   }
 
-  async remove(userId: number, documentId: number) {
+  async remove(userId: string, documentId: string) {
     const favorite = await this.prisma.favorite.findUnique({
       where: {
         userId_documentId: {
@@ -96,7 +96,7 @@ export class FavoritesService {
     return { message: 'Favorite removed successfully' };
   }
 
-  async toggle(userId: number, documentId: number) {
+  async toggle(userId: string, documentId: string) {
     const favorite = await this.prisma.favorite.findUnique({
       where: {
         userId_documentId: {
@@ -127,7 +127,7 @@ export class FavoritesService {
     }
   }
 
-  async isFavorite(userId: number, documentId: number) {
+  async isFavorite(userId: string, documentId: string) {
     const favorite = await this.prisma.favorite.findUnique({
       where: {
         userId_documentId: {

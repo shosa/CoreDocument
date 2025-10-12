@@ -17,7 +17,7 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set registry https://registry.npmjs.org/
 
 # Install ALL dependencies (including workspaces)
-RUN npm ci --workspace=backend --include-workspace-root --loglevel=verbose
+RUN npm ci --workspace=@coredocument/backend --include-workspace-root --loglevel=verbose
 
 # Stage 2: Build
 FROM node:18-alpine AS builder
@@ -25,9 +25,8 @@ RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-# Copy dependencies from deps stage
+# Copy dependencies from deps stage (workspaces install tutto in root)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/backend/node_modules ./apps/backend/node_modules
 
 # Copy root workspace config
 COPY package.json package-lock.json* ./

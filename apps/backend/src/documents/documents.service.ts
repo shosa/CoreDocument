@@ -31,8 +31,13 @@ export class DocumentsService {
     ];
     const month = monthNames[docDate.getMonth()];
 
-    // Upload file to MinIO
-    const { filePath, fileName } = await this.minio.uploadDocument(file, docDate);
+    // Upload file to MinIO with supplier and docNumber for proper naming
+    const { filePath, fileName } = await this.minio.uploadDocument(
+      file,
+      docDate,
+      createDocumentDto.supplier,
+      createDocumentDto.docNumber,
+    );
 
     // Create document in database
     const document = await this.prisma.document.create({
@@ -53,6 +58,92 @@ export class DocumentsService {
     await this.meilisearch.indexDocument(document);
 
     return document;
+  }
+
+  async bulkCreate(files: Express.Multer.File[], metadata: any[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files provided');
+    }
+
+    if (metadata.length !== files.length) {
+      throw new BadRequestException('Metadata count must match files count');
+    }
+
+    const results = [];
+    const errors = [];
+
+    // Process each file with its metadata
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const file = files[i];
+        const meta = metadata[i];
+
+        // Validate metadata
+        if (!meta.date || !meta.supplier || !meta.docNumber) {
+          errors.push({
+            filename: file.originalname,
+            error: 'Missing required metadata (date, supplier, or docNumber)',
+          });
+          continue;
+        }
+
+        const docDate = new Date(meta.date);
+        if (isNaN(docDate.getTime())) {
+          errors.push({
+            filename: file.originalname,
+            error: 'Invalid date format',
+          });
+          continue;
+        }
+
+        const year = docDate.getFullYear();
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        const month = monthNames[docDate.getMonth()];
+
+        // Upload file to MinIO with supplier and docNumber for proper naming
+        const { filePath, fileName } = await this.minio.uploadDocument(
+          file,
+          docDate,
+          meta.supplier,
+          meta.docNumber,
+        );
+
+        // Create document in database
+        const document = await this.prisma.document.create({
+          data: {
+            filename: fileName,
+            minioKey: filePath,
+            supplier: meta.supplier,
+            docNumber: meta.docNumber,
+            date: docDate,
+            month: month,
+            year: year,
+            fileSize: BigInt(file.size),
+            fileExtension: file.originalname.split('.').pop() || '',
+          },
+        });
+
+        // Index in Meilisearch
+        await this.meilisearch.indexDocument(document);
+
+        results.push(document);
+      } catch (error) {
+        errors.push({
+          filename: files[i].originalname,
+          error: error.message || 'Upload failed',
+        });
+      }
+    }
+
+    return {
+      success: results.length,
+      failed: errors.length,
+      results,
+      errors,
+    };
   }
 
   async findAll(query: QueryDocumentDto) {
@@ -99,7 +190,7 @@ export class DocumentsService {
     };
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const document = await this.prisma.document.findUnique({
       where: { id },
     });
@@ -111,7 +202,7 @@ export class DocumentsService {
     return document;
   }
 
-  async update(id: number, updateDocumentDto: UpdateDocumentDto) {
+  async update(id: string, updateDocumentDto: UpdateDocumentDto) {
     const document = await this.findOne(id);
 
     const updateData: any = {};
@@ -144,7 +235,7 @@ export class DocumentsService {
     return updatedDocument;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const document = await this.findOne(id);
 
     // Delete file from MinIO
@@ -165,13 +256,13 @@ export class DocumentsService {
     return { message: 'Document deleted successfully' };
   }
 
-  async getDownloadUrl(id: number) {
+  async getDownloadUrl(id: string) {
     const document = await this.findOne(id);
     const url = await this.minio.getFileUrl(document.minioKey, 3600);
     return { url, fileName: document.filename };
   }
 
-  async getFileStream(id: number) {
+  async getFileStream(id: string) {
     const document = await this.findOne(id);
     const stream = await this.minio.getFileStream(document.minioKey);
     return { stream, fileName: document.filename };

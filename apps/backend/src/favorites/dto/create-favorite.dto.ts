@@ -1,9 +1,8 @@
-import { IsNumber, IsNotEmpty } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
 
 export class CreateFavoriteDto {
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  @Type(() => Number)
-  documentId: number;
+  @IsUUID()
+  documentId: string;
 }

@@ -17,7 +17,7 @@ import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 
 interface Document {
-  id: number;
+  id: string;
   filename: string;
   supplier: string;
   docNumber: string;
@@ -46,7 +46,7 @@ export default function SearchPage() {
     }
   };
 
-  const handleDownload = async (id: number, filename: string) => {
+  const handleDownload = async (id: string, filename: string) => {
     try {
       const response = await documentsApi.download(id);
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -62,7 +62,7 @@ export default function SearchPage() {
     }
   };
 
-  const handleToggleFavorite = async (id: number) => {
+  const handleToggleFavorite = async (id: string) => {
     try {
       await favoritesApi.toggle(id);
       setResults(results.map(doc =>
@@ -74,7 +74,7 @@ export default function SearchPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Sei sicuro di voler eliminare questo documento?')) return;
     try {
       await documentsApi.delete(id);
