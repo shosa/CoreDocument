@@ -146,6 +146,39 @@ export class DocumentsService {
     };
   }
 
+  async getFiltersMetadata() {
+    // Query database per ottenere solo i valori unici di anni e fornitori
+    // Molto più efficiente che caricare tutti i documenti!
+
+    const [suppliersResult, yearsResult] = await Promise.all([
+      // Ottieni fornitori unici
+      this.prisma.document.findMany({
+        select: { supplier: true },
+        distinct: ['supplier'],
+        orderBy: { supplier: 'asc' },
+      }),
+      // Ottieni anni unici
+      this.prisma.document.findMany({
+        select: { year: true },
+        distinct: ['year'],
+        orderBy: { year: 'desc' },
+      }),
+    ]);
+
+    const suppliers = suppliersResult
+      .map(d => d.supplier)
+      .filter(Boolean);
+
+    const years = yearsResult
+      .map(d => d.year)
+      .filter(Boolean);
+
+    return {
+      suppliers,
+      years,
+    };
+  }
+
   async findAll(query: QueryDocumentDto) {
     const page = query.page || 1;
     const limit = query.limit || 20;

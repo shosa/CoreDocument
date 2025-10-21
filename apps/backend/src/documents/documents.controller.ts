@@ -47,6 +47,11 @@ export class DocumentsController {
     return this.documentsService.bulkCreate(files, metadata);
   }
 
+  @Get('metadata/filters')
+  async getFiltersMetadata() {
+    return this.documentsService.getFiltersMetadata();
+  }
+
   @Get()
   async findAll(@Query() query: QueryDocumentDto) {
     return this.documentsService.findAll(query);

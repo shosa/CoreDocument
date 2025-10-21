@@ -51,6 +51,7 @@ export const authApi = {
 // Documents API
 export const documentsApi = {
   list: (params?: any) => api.get('/documents', { params }),
+  getFiltersMetadata: () => api.get('/documents/metadata/filters'),
   get: (id: string) => api.get(`/documents/${id}`),
   create: (data: FormData) => api.post('/documents', data, {
     headers: { 'Content-Type': 'multipart/form-data' }

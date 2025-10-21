@@ -72,17 +72,12 @@ export default function SearchPage() {
 
   const loadFilters = async () => {
     try {
-      const response = await documentsApi.list({ limit: 10000 });
-      const docs = response.data.data || response.data || [];
+      // Usa endpoint dedicato - molto più efficiente!
+      const response = await documentsApi.getFiltersMetadata();
+      const { suppliers: uniqueSuppliers, years: uniqueYears } = response.data;
 
-      const uniqueSuppliers = [...new Set(docs.map((d: Document) => d.supplier))].filter(Boolean).sort();
-      const uniqueYears = [...new Set(docs.map((d: Document) => {
-        const date = new Date(d.date);
-        return date.getFullYear();
-      }))].sort((a, b) => b - a);
-
-      setSuppliers(uniqueSuppliers as string[]);
-      setYears(uniqueYears as number[]);
+      setSuppliers(uniqueSuppliers || []);
+      setYears(uniqueYears || []);
     } catch (error) {
       console.error('Error loading filters:', error);
     }

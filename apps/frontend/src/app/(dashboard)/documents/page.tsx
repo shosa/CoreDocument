@@ -21,16 +21,23 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Collapse,
+  Paper,
+  Autocomplete,
+  Typography,
 } from '@mui/material';
 import {
   Add,
   Delete,
   Download,
-  Search,
+  Search as SearchIcon,
   ViewModule,
   ViewList,
   FilterList,
   Visibility,
+  Clear,
+  ExpandMore,
+  ExpandLess,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import PageHeader from '@/components/PageHeader';
@@ -55,6 +62,21 @@ interface Document {
   createdAt: string;
 }
 
+const MONTHS = [
+  { value: 'January', label: 'Gennaio' },
+  { value: 'February', label: 'Febbraio' },
+  { value: 'March', label: 'Marzo' },
+  { value: 'April', label: 'Aprile' },
+  { value: 'May', label: 'Maggio' },
+  { value: 'June', label: 'Giugno' },
+  { value: 'July', label: 'Luglio' },
+  { value: 'August', label: 'Agosto' },
+  { value: 'September', label: 'Settembre' },
+  { value: 'October', label: 'Ottobre' },
+  { value: 'November', label: 'Novembre' },
+  { value: 'December', label: 'Dicembre' },
+];
+
 export default function DocumentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,10 +85,21 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [supplierFilter, setSupplierFilter] = useState('');
-  const [yearFilter, setYearFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Filtri
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [docNumberFilter, setDocNumberFilter] = useState('');
+  const [dateFromFilter, setDateFromFilter] = useState('');
+  const [dateToFilter, setDateToFilter] = useState('');
+
+  // Liste per filtri (caricate da TUTTO il database)
+  const [allSuppliers, setAllSuppliers] = useState<string[]>([]);
+  const [allYears, setAllYears] = useState<number[]>([]);
 
   // Initialize filters from URL query params
   useEffect(() => {
@@ -76,16 +109,40 @@ export default function DocumentsPage() {
     if (yearParam) setYearFilter(yearParam);
   }, [searchParams]);
 
+  // Carica liste filtri al mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  // Fetch documenti quando cambiano filtri
   useEffect(() => {
     fetchDocuments();
-  }, [supplierFilter, yearFilter]);
+  }, [supplierFilter, yearFilter, monthFilter]);
+
+  const loadFilterOptions = async () => {
+    try {
+      // Usa endpoint dedicato - molto più efficiente!
+      const response = await documentsApi.getFiltersMetadata();
+      const { suppliers, years } = response.data;
+
+      setAllSuppliers(suppliers || []);
+      setAllYears(years || []);
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    }
+  };
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      // Se non ci sono filtri, carica solo gli ultimi 25 documenti
+      // Altrimenti carica fino a 1000 risultati filtrati
+      const defaultLimit = (supplierFilter || yearFilter || monthFilter) ? 1000 : 25;
+      const params: any = { limit: defaultLimit };
+
       if (supplierFilter) params.supplier = supplierFilter;
-      if (yearFilter) params.year = yearFilter;
+      if (yearFilter) params.year = parseInt(yearFilter);
+      if (monthFilter) params.month = monthFilter;
 
       const response = await documentsApi.list(params);
       setDocuments(response.data.data || response.data);
@@ -102,6 +159,8 @@ export default function DocumentsPage() {
       await documentsApi.delete(id);
       enqueueSnackbar('Documento eliminato', { variant: 'success' });
       fetchDocuments();
+      // Ricarica anche le opzioni filtri
+      loadFilterOptions();
     } catch (error: any) {
       enqueueSnackbar('Errore durante l\'eliminazione', { variant: 'error' });
     }
@@ -139,26 +198,52 @@ export default function DocumentsPage() {
     setPreviewUrl(null);
   };
 
+  const handleClearFilters = () => {
+    setSupplierFilter('');
+    setYearFilter('');
+    setMonthFilter('');
+    setDocNumberFilter('');
+    setDateFromFilter('');
+    setDateToFilter('');
+    setSearchQuery('');
+  };
+
   const formatFileSize = (bytes: number) => {
     const kb = bytes / 1024;
     return kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
   };
 
-  // Get unique suppliers and years
-  const suppliers = [...new Set(documents.map(d => d.supplier))].filter(Boolean).sort();
-  const years = [...new Set(documents.map(d => d.year))].sort((a, b) => b - a);
-
-  // Filtraggio
+  // Filtraggio avanzato locale
   const filteredDocuments = documents.filter(doc => {
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
-      doc.filename?.toLowerCase().includes(searchLower) ||
       doc.supplier?.toLowerCase().includes(searchLower) ||
-      doc.docNumber?.toLowerCase().includes(searchLower);
+      doc.docNumber?.toLowerCase().includes(searchLower) ||
+      doc.filename?.toLowerCase().includes(searchLower);
 
-    return matchesSearch;
+    const matchesDocNumber =
+      !docNumberFilter ||
+      doc.docNumber?.toLowerCase().includes(docNumberFilter.toLowerCase());
+
+    const matchesDateFrom =
+      !dateFromFilter || new Date(doc.date) >= new Date(dateFromFilter);
+
+    const matchesDateTo =
+      !dateToFilter || new Date(doc.date) <= new Date(dateToFilter);
+
+    return matchesSearch && matchesDocNumber && matchesDateFrom && matchesDateTo;
   });
+
+  const activeFiltersCount = [
+    supplierFilter,
+    yearFilter,
+    monthFilter,
+    docNumberFilter,
+    dateFromFilter,
+    dateToFilter,
+    searchQuery
+  ].filter(Boolean).length;
 
   const columns: GridColDef[] = [
     {
@@ -238,148 +323,231 @@ export default function DocumentsPage() {
   return (
     <Box>
       <PageHeader
-        title="Documenti DDT Arrivo Merce"
-        breadcrumbs={[{ label: 'Documenti' }]}
-        renderRight={
+        title="Documenti"
+        action={
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => router.push('/documents/new')}
           >
-            Carica Documento
+            Carica Nuovo
           </Button>
         }
       />
 
       <Widget>
-        {/* Toolbar */}
-        <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField
-            fullWidth
-            placeholder="Cerca per nome, fornitore o numero documento..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
-            }}
-            sx={{ flex: 1, minWidth: 250 }}
-          />
-
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(e, newMode) => newMode && setViewMode(newMode)}
-            size="small"
-          >
-            <ToggleButton value="table" aria-label="vista tabella">
-              <ViewList />
-            </ToggleButton>
-            <ToggleButton value="grid" aria-label="vista griglia">
-              <ViewModule />
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-
-        {/* Filtri */}
-        <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
-            <FilterList />
-            <Box sx={{ fontWeight: 600 }}>Filtri</Box>
-            {(supplierFilter || yearFilter) && (
-              <Chip
-                label={`${[supplierFilter, yearFilter].filter(Boolean).length} attivi`}
-                size="small"
-                color="primary"
+        {/* Barra Ricerca e Controlli */}
+        <Box sx={{ mb: 3 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                placeholder="Cerca per fornitore, numero documento o nome file..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.disabled' }} />,
+                  endAdornment: searchQuery && (
+                    <IconButton size="small" onClick={() => setSearchQuery('')}>
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  ),
+                }}
               />
-            )}
-          </Box>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Fornitore</InputLabel>
-                <Select
-                  value={supplierFilter}
-                  label="Fornitore"
-                  onChange={e => setSupplierFilter(e.target.value)}
-                >
-                  <MenuItem value="">Tutti</MenuItem>
-                  {suppliers.map(supplier => (
-                    <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Grid>
-
-            <Grid item xs={12} sm={6} md={4}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Anno</InputLabel>
-                <Select
-                  value={yearFilter}
-                  label="Anno"
-                  onChange={e => setYearFilter(e.target.value)}
+            <Grid item xs={12} md={6}>
+              <Stack direction="row" spacing={2} justifyContent="flex-end">
+                <Button
+                  variant={showFilters ? 'contained' : 'outlined'}
+                  startIcon={showFilters ? <ExpandLess /> : <ExpandMore />}
+                  onClick={() => setShowFilters(!showFilters)}
+                  endIcon={activeFiltersCount > 0 && (
+                    <Chip label={activeFiltersCount} size="small" color="primary" />
+                  )}
                 >
-                  <MenuItem value="">Tutti</MenuItem>
-                  {years.map(year => (
-                    <MenuItem key={year} value={year}>{year}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  Filtri Avanzati
+                </Button>
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  onChange={(_, newMode) => newMode && setViewMode(newMode)}
+                  size="small"
+                >
+                  <ToggleButton value="table">
+                    <ViewList />
+                  </ToggleButton>
+                  <ToggleButton value="grid">
+                    <ViewModule />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Stack>
             </Grid>
           </Grid>
         </Box>
 
-        {/* Contenuto */}
+        {/* Pannello Filtri Avanzati */}
+        <Collapse in={showFilters}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Autocomplete
+                  options={allSuppliers}
+                  value={supplierFilter}
+                  onChange={(_, newValue) => setSupplierFilter(newValue || '')}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Fornitore"
+                      size="small"
+                      placeholder="Tutti"
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Anno</InputLabel>
+                  <Select
+                    value={yearFilter}
+                    label="Anno"
+                    onChange={(e) => setYearFilter(e.target.value)}
+                  >
+                    <MenuItem value="">Tutti</MenuItem>
+                    {allYears.map(year => (
+                      <MenuItem key={year} value={year.toString()}>{year}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Mese</InputLabel>
+                  <Select
+                    value={monthFilter}
+                    label="Mese"
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                    disabled={!yearFilter}
+                  >
+                    <MenuItem value="">Tutti</MenuItem>
+                    {MONTHS.map(month => (
+                      <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Numero Documento"
+                  placeholder="es. DDT001"
+                  value={docNumberFilter}
+                  onChange={(e) => setDocNumberFilter(e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={1.5}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label="Data Da"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={1.5}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label="Data A"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                variant="outlined"
+                startIcon={<Clear />}
+                onClick={handleClearFilters}
+                disabled={activeFiltersCount === 0}
+              >
+                Cancella Filtri
+              </Button>
+            </Box>
+          </Paper>
+        </Collapse>
+
+        {/* Risultati */}
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            {filteredDocuments.length} documento{filteredDocuments.length !== 1 ? 'i' : ''}
+            {!supplierFilter && !yearFilter && !monthFilter && ' (ultimi 25)'}
+          </Typography>
+          {!supplierFilter && !yearFilter && !monthFilter && (
+            <Typography variant="caption" color="text.secondary">
+              Usa i filtri per cercare documenti specifici
+            </Typography>
+          )}
+        </Box>
+
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
         ) : viewMode === 'table' ? (
           <DataGrid
             rows={filteredDocuments}
             columns={columns}
-            autoHeight
-            pageSizeOptions={[10, 25, 50]}
             initialState={{
-              pagination: { paginationModel: { pageSize: 25 } },
+              pagination: {
+                paginationModel: { page: 0, pageSize: 25 },
+              },
             }}
+            pageSizeOptions={[25, 50, 100]}
             disableRowSelectionOnClick
-            sx={{
-              border: 0,
-              '& .MuiDataGrid-cell': {
-                borderBottom: '1px solid',
-                borderColor: 'divider',
+            sx={{ minHeight: 400 }}
+            localeText={{
+              noRowsLabel: 'Nessun documento trovato',
+              MuiTablePagination: {
+                labelRowsPerPage: 'Righe per pagina:',
               },
             }}
           />
         ) : (
-          <Grid container spacing={3}>
-            {filteredDocuments.map(doc => (
+          <Grid container spacing={2}>
+            {filteredDocuments.map((doc) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={doc.id}>
-                <Box
+                <Paper
+                  elevation={2}
                   sx={{
                     p: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    transition: 'all 0.2s',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
                     '&:hover': {
-                      borderColor: 'primary.main',
-                      boxShadow: 2,
-                      transform: 'translateY(-2px)'
-                    }
+                      boxShadow: 4,
+                      cursor: 'pointer',
+                    },
                   }}
+                  onClick={() => handlePreview(doc)}
                 >
-                  <Box sx={{ fontWeight: 600, mb: 1, fontSize: '1.1rem' }}>
+                  <Typography variant="subtitle2" gutterBottom noWrap>
                     {doc.supplier}
-                  </Box>
-                  <Box sx={{ fontSize: '0.875rem', color: 'text.secondary', mb: 1 }}>
-                    Doc. {doc.docNumber}
-                  </Box>
-                  <Box sx={{ fontSize: '0.875rem', color: 'text.secondary', mb: 2 }}>
-                    {format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })} • {formatFileSize(doc.fileSize)}
-                  </Box>
-                  <Stack direction="row" spacing={1}>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {doc.docNumber}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" gutterBottom>
+                    {format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatFileSize(doc.fileSize)}
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ mt: 'auto', pt: 2 }}>
                     <IconButton size="small" onClick={() => handlePreview(doc)}>
                       <Visibility />
                     </IconButton>
@@ -390,20 +558,14 @@ export default function DocumentsPage() {
                       <Delete />
                     </IconButton>
                   </Stack>
-                </Box>
+                </Paper>
               </Grid>
             ))}
           </Grid>
         )}
-
-        {!loading && filteredDocuments.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
-            Nessun documento trovato.
-          </Box>
-        )}
       </Widget>
 
-      {/* Modale Anteprima Documento */}
+      {/* Modale Anteprima */}
       <Dialog
         open={!!previewDoc}
         onClose={handleClosePreview}
@@ -411,7 +573,7 @@ export default function DocumentsPage() {
         fullWidth
       >
         <DialogTitle>
-          Anteprima: {previewDoc?.supplier} - {previewDoc?.docNumber}
+          {previewDoc?.supplier} - {previewDoc?.docNumber}
         </DialogTitle>
         <DialogContent>
           {previewUrl ? (
@@ -419,7 +581,7 @@ export default function DocumentsPage() {
               <iframe
                 src={previewUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
-                title="Anteprima documento"
+                title="Anteprima Documento"
               />
             </Box>
           ) : (
@@ -434,10 +596,7 @@ export default function DocumentsPage() {
             <Button
               variant="contained"
               startIcon={<Download />}
-              onClick={() => {
-                handleDownload(previewDoc.id);
-                handleClosePreview();
-              }}
+              onClick={() => handleDownload(previewDoc.id)}
             >
               Scarica
             </Button>
