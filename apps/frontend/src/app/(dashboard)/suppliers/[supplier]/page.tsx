@@ -26,8 +26,6 @@ import {
 import {
   ArrowBack,
   Download,
-  Star,
-  StarBorder,
   Visibility,
   Delete,
   Description,
@@ -41,7 +39,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import PageHeader from '@/components/PageHeader';
 import Widget from '@/components/Widget';
 import StatCard from '@/components/StatCard';
-import { documentsApi, favoritesApi } from '@/lib/api';
+import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -55,7 +53,6 @@ interface Document {
   fileSize: number;
   year: number;
   month: string;
-  isFavorite?: boolean;
 }
 
 type ViewMode = 'table' | 'grid';
@@ -141,16 +138,6 @@ export default function SupplierDetailPage() {
     }
   };
 
-  const handleToggleFavorite = async (id: string) => {
-    try {
-      await favoritesApi.toggle(id);
-      fetchDocuments();
-      enqueueSnackbar('Preferito aggiornato', { variant: 'success' });
-    } catch (error) {
-      enqueueSnackbar('Errore', { variant: 'error' });
-    }
-  };
-
   const formatFileSize = (bytes: number) => {
     const kb = bytes / 1024;
     return kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
@@ -213,23 +200,10 @@ export default function SupplierDetailPage() {
     {
       field: 'actions',
       headerName: 'Azioni',
-      width: 240,
+      width: 180,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '100%' }}>
-          <IconButton
-            size="small"
-            onClick={() => handleToggleFavorite(params.row.id)}
-            title={params.row.isFavorite ? 'Rimuovi preferito' : 'Aggiungi preferito'}
-            sx={{
-              bgcolor: 'black',
-              color: params.row.isFavorite ? '#FFD700' : 'white',
-              borderRadius: '6px',
-              '&:hover': { bgcolor: 'grey.800' },
-            }}
-          >
-            {params.row.isFavorite ? <Star fontSize="small" /> : <StarBorder fontSize="small" />}
-          </IconButton>
           <IconButton
             size="small"
             onClick={() => handlePreview(params.row)}
@@ -422,9 +396,6 @@ export default function SupplierDetailPage() {
                         {format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })} • {formatFileSize(doc.fileSize)}
                       </Box>
                       <Stack direction="row" spacing={1}>
-                        <IconButton size="small" onClick={() => handleToggleFavorite(doc.id)}>
-                          {doc.isFavorite ? <Star color="primary" /> : <StarBorder />}
-                        </IconButton>
                         <IconButton size="small" onClick={() => handlePreview(doc)}>
                           <Visibility />
                         </IconButton>

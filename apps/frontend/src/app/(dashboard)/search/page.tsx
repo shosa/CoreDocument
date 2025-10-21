@@ -19,10 +19,10 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { Search, Download, Star, StarBorder, Delete, FilterList, Clear, Visibility } from '@mui/icons-material';
+import { Search, Download, Delete, FilterList, Clear, Visibility } from '@mui/icons-material';
 import PageHeader from '@/components/PageHeader';
 import Widget from '@/components/Widget';
-import { documentsApi, favoritesApi } from '@/lib/api';
+import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -34,7 +34,6 @@ interface Document {
   docNumber: string;
   date: string;
   fileSize: number;
-  isFavorite?: boolean;
 }
 
 export default function SearchPage() {
@@ -147,18 +146,6 @@ export default function SearchPage() {
       enqueueSnackbar('Download avviato', { variant: 'success' });
     } catch (error) {
       enqueueSnackbar('Errore durante il download', { variant: 'error' });
-    }
-  };
-
-  const handleToggleFavorite = async (id: string) => {
-    try {
-      await favoritesApi.toggle(id);
-      setResults(results.map(doc =>
-        doc.id === id ? { ...doc, isFavorite: !doc.isFavorite } : doc
-      ));
-      enqueueSnackbar('Preferito aggiornato', { variant: 'success' });
-    } catch (error) {
-      enqueueSnackbar('Errore', { variant: 'error' });
     }
   };
 
@@ -316,9 +303,6 @@ export default function SearchPage() {
                     {format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })} • {formatFileSize(doc.fileSize)}
                   </Box>
                   <Stack direction="row" spacing={1}>
-                    <IconButton size="small" onClick={() => handleToggleFavorite(doc.id)}>
-                      {doc.isFavorite ? <Star color="primary" /> : <StarBorder />}
-                    </IconButton>
                     <IconButton size="small" onClick={() => handlePreview(doc)}>
                       <Visibility />
                     </IconButton>

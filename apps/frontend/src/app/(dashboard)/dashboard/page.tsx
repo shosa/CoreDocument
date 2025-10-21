@@ -25,7 +25,6 @@ import {
 import {
   Search,
   CloudUpload,
-  Star,
   TrendingUp,
   Description,
   Visibility,
@@ -34,7 +33,7 @@ import {
 import PageHeader from '@/components/PageHeader';
 import Widget from '@/components/Widget';
 import StatCard from '@/components/StatCard';
-import { documentsApi, favoritesApi } from '@/lib/api';
+import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -54,14 +53,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentDocuments, setRecentDocuments] = useState<Document[]>([]);
-  const [favoriteDocuments, setFavoriteDocuments] = useState<Document[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     thisMonth: 0,
-    favorites: 0,
   });
 
   useEffect(() => {
@@ -72,15 +69,13 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      // Carica documenti recenti (50 per UI), statistiche totali e fornitori separatamente
-      const [recentDocsResponse, favoritesResponse, statsResponse] = await Promise.all([
+      // Carica documenti recenti (50 per UI) e statistiche totali
+      const [recentDocsResponse, statsResponse] = await Promise.all([
         documentsApi.list({ limit: 50, page: 1 }),
-        favoritesApi.list({ limit: 10 }),
         documentsApi.list({ limit: 1, page: 1 }), // Solo per meta.total
       ]);
 
       const documents = recentDocsResponse.data.data || recentDocsResponse.data || [];
-      const favorites = favoritesResponse.data.data || favoritesResponse.data || [];
       const totalDocuments = statsResponse.data.meta?.total || 0;
 
       // Ordina per data più recente
@@ -89,7 +84,6 @@ export default function DashboardPage() {
       );
 
       setRecentDocuments(sortedDocs.slice(0, 10));
-      setFavoriteDocuments(favorites.slice(0, 5));
 
       // Estrai fornitori unici dai documenti caricati
       const uniqueSuppliers = [...new Set(documents.map((d: Document) => d.supplier))]
@@ -116,7 +110,6 @@ export default function DashboardPage() {
       setStats({
         total: totalDocuments,
         thisMonth: thisMonthCount,
-        favorites: favorites.length,
       });
     } catch (error) {
       enqueueSnackbar('Errore nel caricamento dei dati', { variant: 'error' });
@@ -153,7 +146,7 @@ export default function DashboardPage() {
   const handleDownload = async (id: string) => {
     try {
       const response = await documentsApi.download(id);
-      const doc = recentDocuments.find(d => d.id === id) || favoriteDocuments.find(d => d.id === id);
+      const doc = recentDocuments.find(d => d.id === id);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -219,7 +212,7 @@ export default function DashboardPage() {
 
       <Grid container spacing={3}>
         {/* Statistiche */}
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <StatCard
             title="Documenti Totali"
             value={stats.total}
@@ -227,7 +220,7 @@ export default function DashboardPage() {
             color="primary"
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <StatCard
             title="Questo Mese"
             value={stats.thisMonth}
@@ -235,17 +228,9 @@ export default function DashboardPage() {
             color="success"
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <StatCard
-            title="Preferiti"
-            value={stats.favorites}
-            icon={<Star />}
-            color="warning"
-          />
-        </Grid>
 
         {/* Ricerca rapida per fornitore */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Widget>
             <Typography variant="h6" gutterBottom>
               Ricerca Rapida per Fornitore
@@ -266,56 +251,6 @@ export default function DashboardPage() {
                 </Typography>
               )}
             </Stack>
-          </Widget>
-        </Grid>
-
-        {/* Documenti preferiti */}
-        <Grid item xs={12} md={6}>
-          <Widget>
-            <Typography variant="h6" gutterBottom>
-              Documenti Preferiti
-            </Typography>
-            {favoriteDocuments.length > 0 ? (
-              <List dense>
-                {favoriteDocuments.map((doc) => (
-                  <ListItem
-                    key={doc.id}
-                    disablePadding
-                    secondaryAction={
-                      <Stack direction="row" spacing={1}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handlePreview(doc)}
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDownload(doc.id)}
-                        >
-                          <Download fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    }
-                  >
-                    <ListItemButton onClick={() => handlePreview(doc)}>
-                      <ListItemText
-                        primary={`${doc.supplier} - ${doc.docNumber}`}
-                        secondary={
-                          doc.date
-                            ? format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })
-                            : 'N/A'
-                        }
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography color="text.secondary" sx={{ py: 2 }}>
-                Nessun documento preferito
-              </Typography>
-            )}
           </Widget>
         </Grid>
 
