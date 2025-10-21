@@ -66,6 +66,11 @@ async function main() {
     const fileName = `${supplier} ${docNumber}.${fileExtension}`;
     const minioKey = `documents/${year}/${month}/${day}/${fileName}`;
 
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
     const doc = await prisma.document.create({
       data: {
         filename: fileName,
@@ -73,9 +78,10 @@ async function main() {
         supplier: supplier.replace(/_/g, ' '),
         docNumber: docNumber,
         date: date,
-        fileSize: Math.floor(Math.random() * 5000000) + 100000, // 100KB - 5MB
-        mimeType: fileExtension === 'pdf' ? 'application/pdf' : 'image/jpeg',
-        uploadedById: Math.random() > 0.5 ? admin.id : user.id,
+        month: monthNames[date.getMonth()],
+        year: year,
+        fileSize: BigInt(Math.floor(Math.random() * 5000000) + 100000), // 100KB - 5MB
+        fileExtension: fileExtension,
       },
     });
 

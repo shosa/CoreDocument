@@ -15,13 +15,13 @@ import {
   Divider,
   Chip,
 } from '@mui/material';
-import { Search, Description } from '@mui/icons-material';
+import { Search, Description, Business } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 
 interface SearchResult {
-  id: number;
-  type: 'document';
+  id: string | number;
+  type: 'supplier' | 'document';
   title: string;
   subtitle: string;
   url: string;
@@ -52,18 +52,46 @@ export default function GlobalSearch() {
         setLoading(true);
         setOpen(true);
         try {
-          const response = await api.get('/search', { params: { query } });
-          const docs = response.data?.data || response.data || [];
+          // Cerca documenti
+          const docsResponse = await api.get('/search', { params: { q: query } });
+          const docs = docsResponse.data?.data || docsResponse.data || [];
 
-          const documents = docs.map((d: any) => ({
+          // Estrai fornitori unici che matchano la ricerca
+          const suppliersMap = new Map<string, any>();
+          docs.forEach((d: any) => {
+            if (d.supplier && d.supplier.toLowerCase().includes(query.toLowerCase())) {
+              if (!suppliersMap.has(d.supplier)) {
+                suppliersMap.set(d.supplier, {
+                  name: d.supplier,
+                  count: 0,
+                  latestDate: d.date
+                });
+              }
+              suppliersMap.get(d.supplier)!.count++;
+            }
+          });
+
+          // Converti fornitori in risultati
+          const suppliers: SearchResult[] = Array.from(suppliersMap.values()).map(s => ({
+            id: s.name,
+            type: 'supplier' as const,
+            title: s.name,
+            subtitle: `${s.count} documenti`,
+            url: `/suppliers/${encodeURIComponent(s.name)}`,
+          }));
+
+          // Converti documenti in risultati
+          const documents: SearchResult[] = docs.map((d: any) => ({
             id: d.id,
             type: 'document' as const,
-            title: d.filename,
-            subtitle: `${d.supplier} - ${d.docNumber}`,
+            title: `${d.supplier} - ${d.docNumber}`,
+            subtitle: d.date ? new Date(d.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
             url: `/documents`,
           }));
 
-          setResults(documents.slice(0, 10));
+          // Combina: fornitori prima, poi documenti (max 3 fornitori + 10 documenti)
+          const combined = [...suppliers.slice(0, 3), ...documents.slice(0, 10)];
+          setResults(combined);
         } catch (error) {
           console.error('Search error:', error);
           setResults([]);
@@ -87,10 +115,12 @@ export default function GlobalSearch() {
   };
 
   const getIcon = (type: string) => {
+    if (type === 'supplier') return <Business fontSize="small" />;
     return <Description fontSize="small" />;
   };
 
   const getTypeLabel = (type: string) => {
+    if (type === 'supplier') return 'Fornitore';
     return 'Documento';
   };
 

@@ -34,7 +34,7 @@ services:
       APP_URL: ${APP_URL}
       NODE_ENV: production
     ports:
-      - "3002:3002"
+      - "3003:3003"
     networks:
       - core-network  # Usa la network condivisa
     command: sh -c "npx prisma migrate deploy || true && node dist/main"
@@ -52,7 +52,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NODE_ENV: production
     ports:
-      - "3003:3000"
+      - "3002:3000"
     depends_on:
       - backend
     networks:

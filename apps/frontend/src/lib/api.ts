@@ -64,7 +64,7 @@ export const documentsApi = {
     responseType: 'blob'
   }),
   getDownloadUrl: (id: string) => api.get(`/documents/${id}/download-url`),
-  search: (query: string) => api.get('/search', { params: { query } }),
+  search: (query: string) => api.get('/search', { params: { q: query } }),
 };
 
 // Favorites API

@@ -1,0 +1,22 @@
+{
+  "name": "coredocument-import-scripts",
+  "version": "1.0.0",
+  "description": "Scripts per import massivo documenti legacy in CoreDocument",
+  "main": "import-legacy-documents.js",
+  "scripts": {
+    "import": "node import-legacy-documents.js",
+    "import:dry-run": "node import-legacy-documents.js --dry-run",
+    "import:test": "node import-legacy-documents.js --test",
+    "test": "node test-import.js"
+  },
+  "keywords": ["coredocument", "import", "migration"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0",
+    "cli-progress": "^3.12.0",
+    "colors": "^1.4.0",
+    "commander": "^11.0.0"
+  }
+}

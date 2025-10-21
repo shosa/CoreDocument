@@ -29,6 +29,8 @@ import {
   ExpandMore,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  Business as BusinessIcon,
+  Build as BuildIcon,
 } from '@mui/icons-material';
 import { usePathname, useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
@@ -60,14 +62,19 @@ const navigationItems: NavigationItem[] = [
     icon: <DocumentIcon />,
   },
   {
+    label: 'Fornitori',
+    href: '/suppliers',
+    icon: <BusinessIcon />,
+  },
+  {
     label: 'Ricerca',
     href: '/search',
     icon: <SearchIcon />,
   },
   {
-    label: 'Preferiti',
-    href: '/favorites',
-    icon: <FavoritesIcon />,
+    label: 'Tools',
+    href: '/tools',
+    icon: <BuildIcon />,
   },
 ];
 

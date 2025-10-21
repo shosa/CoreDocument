@@ -154,10 +154,10 @@ export class DocumentsService {
     const where: any = {};
 
     if (query.supplier) {
-      where.supplier = { contains: query.supplier, mode: 'insensitive' };
+      where.supplier = { contains: query.supplier };
     }
     if (query.docNumber) {
-      where.docNumber = { contains: query.docNumber, mode: 'insensitive' };
+      where.docNumber = { contains: query.docNumber };
     }
     if (query.date) {
       where.date = new Date(query.date);

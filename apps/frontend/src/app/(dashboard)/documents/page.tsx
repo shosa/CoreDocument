@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
   Button,
@@ -60,6 +60,7 @@ interface Document {
 
 export default function DocumentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,14 @@ export default function DocumentsPage() {
   const [yearFilter, setYearFilter] = useState('');
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Initialize filters from URL query params
+  useEffect(() => {
+    const supplierParam = searchParams.get('supplier');
+    const yearParam = searchParams.get('year');
+    if (supplierParam) setSupplierFilter(supplierParam);
+    if (yearParam) setYearFilter(yearParam);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchDocuments();
@@ -166,19 +175,14 @@ export default function DocumentsPage() {
 
   const columns: GridColDef[] = [
     {
-      field: 'filename',
-      headerName: 'Nome File',
-      flex: 1,
-      minWidth: 200,
-    },
-    {
       field: 'supplier',
       headerName: 'Fornitore',
-      width: 180,
+      flex: 1,
+      minWidth: 180,
     },
     {
       field: 'docNumber',
-      headerName: 'Numero Doc',
+      headerName: 'Numero Documento',
       width: 150,
     },
     {
@@ -378,15 +382,22 @@ export default function DocumentsPage() {
                     border: '1px solid',
                     borderColor: 'divider',
                     borderRadius: 1,
-                    '&:hover': { borderColor: 'primary.main' }
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      boxShadow: 2,
+                      transform: 'translateY(-2px)'
+                    }
                   }}
                 >
-                  <Box sx={{ fontWeight: 600, mb: 1 }}>{doc.filename}</Box>
+                  <Box sx={{ fontWeight: 600, mb: 1, fontSize: '1.1rem' }}>
+                    {doc.supplier}
+                  </Box>
                   <Box sx={{ fontSize: '0.875rem', color: 'text.secondary', mb: 1 }}>
-                    {doc.supplier} - {doc.docNumber}
+                    Doc. {doc.docNumber}
                   </Box>
                   <Box sx={{ fontSize: '0.875rem', color: 'text.secondary', mb: 2 }}>
-                    {format(new Date(doc.date), 'dd/MM/yyyy')} - {formatFileSize(doc.fileSize)}
+                    {format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })} • {formatFileSize(doc.fileSize)}
                   </Box>
                   <Stack direction="row" spacing={1}>
                     <IconButton size="small" onClick={() => handleToggleFavorite(doc.id)}>
@@ -423,7 +434,7 @@ export default function DocumentsPage() {
         fullWidth
       >
         <DialogTitle>
-          Anteprima: {previewDoc?.filename}
+          Anteprima: {previewDoc?.supplier} - {previewDoc?.docNumber}
         </DialogTitle>
         <DialogContent>
           {previewUrl ? (

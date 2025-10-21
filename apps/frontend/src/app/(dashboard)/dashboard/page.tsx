@@ -17,6 +17,10 @@ import {
   Stack,
   IconButton,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Search,
@@ -52,6 +56,8 @@ export default function DashboardPage() {
   const [recentDocuments, setRecentDocuments] = useState<Document[]>([]);
   const [favoriteDocuments, setFavoriteDocuments] = useState<Document[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     thisMonth: 0,
@@ -66,13 +72,16 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      const [documentsResponse, favoritesResponse] = await Promise.all([
-        documentsApi.list({ limit: 50 }),
+      // Carica documenti recenti (50 per UI), statistiche totali e fornitori separatamente
+      const [recentDocsResponse, favoritesResponse, statsResponse] = await Promise.all([
+        documentsApi.list({ limit: 50, page: 1 }),
         favoritesApi.list({ limit: 10 }),
+        documentsApi.list({ limit: 1, page: 1 }), // Solo per meta.total
       ]);
 
-      const documents = documentsResponse.data.data || documentsResponse.data || [];
+      const documents = recentDocsResponse.data.data || recentDocsResponse.data || [];
       const favorites = favoritesResponse.data.data || favoritesResponse.data || [];
+      const totalDocuments = statsResponse.data.meta?.total || 0;
 
       // Ordina per data più recente
       const sortedDocs = [...documents].sort((a, b) =>
@@ -82,25 +91,31 @@ export default function DashboardPage() {
       setRecentDocuments(sortedDocs.slice(0, 10));
       setFavoriteDocuments(favorites.slice(0, 5));
 
-      // Estrai fornitori unici
+      // Estrai fornitori unici dai documenti caricati
       const uniqueSuppliers = [...new Set(documents.map((d: Document) => d.supplier))]
         .filter(Boolean)
         .slice(0, 10);
       setSuppliers(uniqueSuppliers as string[]);
 
-      // Calcola statistiche
+      // Calcola statistiche questo mese usando API filter
       const now = new Date();
-      const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const currentMonth = monthNames[now.getMonth()];
 
-      const docsThisMonth = documents.filter((doc: Document) => {
-        const docDate = new Date(doc.date);
-        return docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear;
-      }).length;
+      const thisMonthResponse = await documentsApi.list({
+        year: currentYear,
+        month: currentMonth,
+        limit: 1
+      });
+      const thisMonthCount = thisMonthResponse.data.meta?.total || 0;
 
       setStats({
-        total: documents.length,
-        thisMonth: docsThisMonth,
+        total: totalDocuments,
+        thisMonth: thisMonthCount,
         favorites: favorites.length,
       });
     } catch (error) {
@@ -120,8 +135,19 @@ export default function DashboardPage() {
     router.push(`/documents?supplier=${encodeURIComponent(supplier)}`);
   };
 
-  const handleViewDocument = (id: string) => {
-    router.push(`/documents/${id}`);
+  const handlePreview = async (doc: Document) => {
+    try {
+      setPreviewDoc(doc);
+      const response = await documentsApi.getDownloadUrl(doc.id);
+      setPreviewUrl(response.data.url);
+    } catch (error) {
+      enqueueSnackbar('Errore nel caricamento anteprima', { variant: 'error' });
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewDoc(null);
+    setPreviewUrl(null);
   };
 
   const handleDownload = async (id: string) => {
@@ -259,7 +285,7 @@ export default function DashboardPage() {
                       <Stack direction="row" spacing={1}>
                         <IconButton
                           size="small"
-                          onClick={() => handleViewDocument(doc.id)}
+                          onClick={() => handlePreview(doc)}
                         >
                           <Visibility fontSize="small" />
                         </IconButton>
@@ -272,14 +298,14 @@ export default function DashboardPage() {
                       </Stack>
                     }
                   >
-                    <ListItemButton onClick={() => handleViewDocument(doc.id)}>
+                    <ListItemButton onClick={() => handlePreview(doc)}>
                       <ListItemText
-                        primary={doc.filename}
-                        secondary={`${doc.supplier} - ${doc.docNumber} - ${format(
-                          new Date(doc.date),
-                          'dd/MM/yyyy',
-                          { locale: it }
-                        )}`}
+                        primary={`${doc.supplier} - ${doc.docNumber}`}
+                        secondary={
+                          doc.date
+                            ? format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })
+                            : 'N/A'
+                        }
                       />
                     </ListItemButton>
                   </ListItem>
@@ -314,7 +340,7 @@ export default function DashboardPage() {
                       <Stack direction="row" spacing={1}>
                         <IconButton
                           size="small"
-                          onClick={() => handleViewDocument(doc.id)}
+                          onClick={() => handlePreview(doc)}
                         >
                           <Visibility fontSize="small" />
                         </IconButton>
@@ -327,14 +353,14 @@ export default function DashboardPage() {
                       </Stack>
                     }
                   >
-                    <ListItemButton onClick={() => handleViewDocument(doc.id)}>
+                    <ListItemButton onClick={() => handlePreview(doc)}>
                       <ListItemText
-                        primary={doc.filename}
-                        secondary={`${doc.supplier} - ${doc.docNumber} - ${format(
-                          new Date(doc.date),
-                          'dd/MM/yyyy',
-                          { locale: it }
-                        )}`}
+                        primary={`${doc.supplier} - ${doc.docNumber}`}
+                        secondary={
+                          doc.date
+                            ? format(new Date(doc.date), 'dd/MM/yyyy', { locale: it })
+                            : 'N/A'
+                        }
                       />
                     </ListItemButton>
                   </ListItem>
@@ -348,6 +374,48 @@ export default function DashboardPage() {
           </Widget>
         </Grid>
       </Grid>
+
+      {/* Modale Anteprima Documento */}
+      <Dialog
+        open={!!previewDoc}
+        onClose={handleClosePreview}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Anteprima: {previewDoc?.supplier} - {previewDoc?.docNumber}
+        </DialogTitle>
+        <DialogContent>
+          {previewUrl ? (
+            <Box sx={{ width: '100%', height: '70vh' }}>
+              <iframe
+                src={previewUrl}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="Anteprima documento"
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePreview}>Chiudi</Button>
+          {previewDoc && (
+            <Button
+              variant="contained"
+              startIcon={<Download />}
+              onClick={() => {
+                handleDownload(previewDoc.id);
+                handleClosePreview();
+              }}
+            >
+              Download
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

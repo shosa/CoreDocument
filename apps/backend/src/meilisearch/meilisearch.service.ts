@@ -93,14 +93,14 @@ export class MeilisearchService implements OnModuleInit {
       await index.addDocuments([
         {
           id: document.id,
-          fileName: document.fileName,
+          fileName: document.filename || document.fileName, // Support both field names
           supplier: document.supplier || '',
           docNumber: document.docNumber || '',
-          date: document.date ? document.date.toISOString().split('T')[0] : '',
+          date: document.date ? (typeof document.date === 'string' ? document.date.split('T')[0] : document.date.toISOString().split('T')[0]) : '',
           month: document.month || '',
           year: document.year || 0,
-          fileSize: document.fileSize || 0,
-          createdAt: document.createdAt.toISOString(),
+          fileSize: Number(document.fileSize) || 0,
+          createdAt: document.createdAt ? (typeof document.createdAt === 'string' ? document.createdAt : document.createdAt.toISOString()) : new Date().toISOString(),
         },
       ]);
     } catch (error) {

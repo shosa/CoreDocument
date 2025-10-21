@@ -47,7 +47,8 @@ docker-compose -p coredocument logs -f [backend|frontend|nginx]
 
 - **Frontend**: http://localhost:81
 - **Backend API**: http://localhost:81/api
-- **Backend diretto**: http://localhost:3002/api (solo per debug)
+- **Frontend diretto**: http://localhost:3002 (solo per debug)
+- **Backend diretto**: http://localhost:3003/api (solo per debug)
 
 ## Struttura
 
@@ -151,7 +152,7 @@ build.bat backend
 - ✅ Download documenti
 
 ### Da implementare (opzionale)
-- ⏳ Scanner filesystem per importare documenti esistenti
+- ✅ **Scanner filesystem per importare documenti esistenti** → Vedi [scripts/README.md](scripts/README.md)
 - ⏳ Admin panel per gestione database
 - ⏳ Statistiche e dashboard
 
@@ -159,13 +160,36 @@ build.bat backend
 
 CoreDocument si connette alla network `core-network` (creata da CoreServices) per accedere a MySQL, MinIO e Meilisearch.
 
+## Import Documenti Legacy
+
+Per importare documenti dalla vecchia struttura (cartella di rete Y:\) al nuovo sistema:
+
+```bash
+cd scripts
+npm install
+
+# Test funzioni
+npm test
+
+# Dry run (simulazione)
+node import-legacy-documents.js --dry-run --source Y:\
+
+# Test su un mese
+node import-legacy-documents.js --test --year 2023 --month GENNAIO --source Y:\ --token YOUR_JWT_TOKEN
+
+# Import completo
+node import-legacy-documents.js --source Y:\ --token YOUR_JWT_TOKEN --verbose
+```
+
+**Documentazione completa:** [scripts/README.md](scripts/README.md)
+
 ## Porte utilizzate
 
 - **80**: CoreMachine (nginx)
 - **81**: CoreDocument (nginx) ← Questa applicazione
 - **3001**: CoreMachine backend
-- **3002**: CoreDocument backend ← Questa applicazione
-- **3003**: CoreDocument frontend (porta interna)
+- **3002**: CoreDocument frontend ← Questa applicazione (host)
+- **3003**: CoreDocument backend ← Questa applicazione (host)
 - **8080**: PHPMyAdmin
 - **9000/9001**: MinIO
 - **7700**: Meilisearch

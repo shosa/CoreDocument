@@ -4,7 +4,7 @@ const nextConfig = {
   swcMinify: true,
   output: 'standalone', // Enable standalone build for Docker
   env: {
-    API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    API_URL: process.env.NEXT_PUBLIC_API_URL || '/api',
   },
   typescript: {
     ignoreBuildErrors: true, // <--- ignora errori TypeScript in build
@@ -20,6 +20,20 @@ const nextConfig = {
         permanent: false,
       },
     ];
+  },
+  // Proxy per sviluppo locale: /api -> localhost:3003/api
+  async rewrites() {
+    // Solo in development, fai proxy delle chiamate /api al backend su porta 3003
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/api/:path*',
+          destination: 'http://localhost:3003/api/:path*',
+        },
+      ];
+    }
+    // In production (Docker), nginx gestisce il routing
+    return [];
   },
 };
 
