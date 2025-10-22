@@ -55,6 +55,12 @@ export class DocumentsController {
     return this.documentsService.getFiltersMetadata();
   }
 
+  @Get('search')
+  // Accesso pubblico - nessun guard
+  async search(@Query() query: QueryDocumentDto) {
+    return this.documentsService.search(query.q || '', query);
+  }
+
   @Get()
   // Accesso pubblico - nessun guard
   async findAll(@Query() query: QueryDocumentDto) {

@@ -4,6 +4,10 @@ import { Type } from 'class-transformer';
 export class QueryDocumentDto {
   @IsString()
   @IsOptional()
+  q?: string;
+
+  @IsString()
+  @IsOptional()
   supplier?: string;
 
   @IsString()

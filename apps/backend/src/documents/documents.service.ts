@@ -236,6 +236,39 @@ export class DocumentsService {
     };
   }
 
+  async search(query: string, filters: QueryDocumentDto) {
+    if (!query || query.trim() === '') {
+      // Se non c'è query, usa findAll normale
+      return this.findAll(filters);
+    }
+
+    // Usa Meilisearch per ricerca full-text
+    const page = filters.page || 1;
+    const limit = filters.limit || 1000; // Limite alto per search
+
+    const result = await this.meilisearch.searchDocuments(
+      query,
+      {
+        supplier: filters.supplier,
+        docNumber: filters.docNumber,
+        month: filters.month,
+        year: filters.year,
+      },
+      page,
+      limit,
+    );
+
+    return {
+      data: result.hits,
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+      },
+    };
+  }
+
   async findOne(id: string) {
     const document = await this.prisma.document.findUnique({
       where: { id },

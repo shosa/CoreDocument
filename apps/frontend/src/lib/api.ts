@@ -58,6 +58,7 @@ export const authApi = {
 export const documentsApi = {
   list: (params?: any) => api.get('/documents', { params }),
   getFiltersMetadata: () => api.get('/documents/metadata/filters'),
+  search: (params: any) => api.get('/documents/search', { params }),
   get: (id: string) => api.get(`/documents/${id}`),
   create: (data: FormData) => api.post('/documents', data, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -71,7 +72,6 @@ export const documentsApi = {
     responseType: 'blob'
   }),
   getDownloadUrl: (id: string) => api.get(`/documents/${id}/download-url`),
-  search: (query: string) => api.get('/search', { params: { q: query } }),
 };
 
 // Favorites API

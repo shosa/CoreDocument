@@ -30,6 +30,7 @@ import {
   Download,
   Visibility,
   Delete,
+  Edit,
   Description,
   CalendarMonth,
   TrendingUp,
@@ -45,6 +46,7 @@ import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuthStore } from '@/store/authStore';
 
 interface Document {
   id: string;
@@ -63,6 +65,7 @@ export default function SupplierDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
+  const { isAuthenticated } = useAuthStore();
   const supplierName = decodeURIComponent(params.supplier as string);
 
   const [loading, setLoading] = useState(true);
@@ -233,19 +236,36 @@ export default function SupplierDetailPage() {
           >
             <Download fontSize="small" />
           </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDelete(params.row.id)}
-            title="Elimina"
-            sx={{
-              bgcolor: 'black',
-              color: 'white',
-              borderRadius: '6px',
-              '&:hover': { bgcolor: 'grey.800' },
-            }}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          {isAuthenticated && (
+            <>
+              <IconButton
+                size="small"
+                onClick={() => router.push(`/documents/${params.row.id}/edit`)}
+                title="Modifica"
+                sx={{
+                  bgcolor: 'black',
+                  color: 'white',
+                  borderRadius: '6px',
+                  '&:hover': { bgcolor: 'grey.800' },
+                }}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => handleDelete(params.row.id)}
+                title="Elimina"
+                sx={{
+                  bgcolor: 'black',
+                  color: 'white',
+                  borderRadius: '6px',
+                  '&:hover': { bgcolor: 'grey.800' },
+                }}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
       ),
     },
@@ -405,9 +425,16 @@ export default function SupplierDetailPage() {
                         <IconButton size="small" onClick={() => handleDownload(doc.id)}>
                           <Download />
                         </IconButton>
-                        <IconButton size="small" onClick={() => handleDelete(doc.id)}>
-                          <Delete />
-                        </IconButton>
+                        {isAuthenticated && (
+                          <>
+                            <IconButton size="small" onClick={() => router.push(`/documents/${doc.id}/edit`)}>
+                              <Edit />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => handleDelete(doc.id)}>
+                              <Delete />
+                            </IconButton>
+                          </>
+                        )}
                       </Stack>
                     </Box>
                   </Grid>

@@ -21,13 +21,15 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { Search, Download, Delete, FilterList, Clear, Visibility } from '@mui/icons-material';
+import { Search, Download, Delete, FilterList, Clear, Visibility, Edit } from '@mui/icons-material';
 import PageHeader from '@/components/PageHeader';
 import Widget from '@/components/Widget';
 import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
 
 interface Document {
   id: string;
@@ -39,6 +41,8 @@ interface Document {
 }
 
 export default function SearchPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const { enqueueSnackbar } = useSnackbar();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<Document[]>([]);
@@ -88,22 +92,18 @@ export default function SearchPage() {
   const handleSearch = async () => {
     try {
       setLoading(true);
-      const params: any = { limit: 1000 };
+      const params: any = {
+        q: searchQuery,
+        limit: 10000 // Limite molto alto per ricerca
+      };
+
       if (supplierFilter) params.supplier = supplierFilter;
       if (yearFilter) params.year = parseInt(yearFilter);
       if (monthFilter) params.month = monthFilter;
 
-      const response = await documentsApi.list(params);
-      let docs = response.data.data || response.data || [];
-
-      // Filtra localmente per query di testo
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        docs = docs.filter((doc: Document) =>
-          doc.supplier?.toLowerCase().includes(query) ||
-          doc.docNumber?.toLowerCase().includes(query)
-        );
-      }
+      // Usa il nuovo endpoint /api/documents/search con Meilisearch
+      const response = await documentsApi.search(params);
+      const docs = response.data.data || response.data || [];
 
       setResults(docs);
     } catch (error) {
@@ -307,9 +307,16 @@ export default function SearchPage() {
                     <IconButton size="small" onClick={() => handleDownload(doc.id)}>
                       <Download />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(doc.id)}>
-                      <Delete />
-                    </IconButton>
+                    {isAuthenticated && (
+                      <>
+                        <IconButton size="small" onClick={() => router.push(`/documents/${doc.id}/edit`)}>
+                          <Edit />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => handleDelete(doc.id)}>
+                          <Delete />
+                        </IconButton>
+                      </>
+                    )}
                   </Stack>
                 </Box>
               </Grid>

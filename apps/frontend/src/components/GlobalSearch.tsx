@@ -86,7 +86,7 @@ export default function GlobalSearch() {
             type: 'document' as const,
             title: `${d.supplier} - ${d.docNumber}`,
             subtitle: d.date ? new Date(d.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
-            url: `/documents`,
+            url: `/documents?docId=${d.id}`,
           }));
 
           // Combina: fornitori prima, poi documenti (max 3 fornitori + 10 documenti)

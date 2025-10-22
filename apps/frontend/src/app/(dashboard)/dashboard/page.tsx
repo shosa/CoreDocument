@@ -31,6 +31,8 @@ import {
   Description,
   Visibility,
   Download,
+  Edit,
+  Delete,
 } from '@mui/icons-material';
 import PageHeader from '@/components/PageHeader';
 import Widget from '@/components/Widget';
@@ -39,6 +41,7 @@ import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuthStore } from '@/store/authStore';
 
 interface Document {
   id: string;
@@ -50,6 +53,7 @@ interface Document {
 }
 
 export default function DashboardPage() {
+  const { isAuthenticated } = useAuthStore();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
@@ -160,6 +164,17 @@ export default function DashboardPage() {
       enqueueSnackbar('Download avviato', { variant: 'success' });
     } catch (error) {
       enqueueSnackbar('Errore durante il download', { variant: 'error' });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questo documento?')) return;
+    try {
+      await documentsApi.delete(id);
+      enqueueSnackbar('Documento eliminato', { variant: 'success' });
+      loadDashboardData();
+    } catch (error) {
+      enqueueSnackbar('Errore durante l\'eliminazione', { variant: 'error' });
     }
   };
 
@@ -288,6 +303,22 @@ export default function DashboardPage() {
                         >
                           <Download fontSize="small" />
                         </IconButton>
+                        {isAuthenticated && (
+                          <>
+                            <IconButton
+                              size="small"
+                              onClick={() => router.push(`/documents/${doc.id}/edit`)}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(doc.id)}
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </>
+                        )}
                       </Stack>
                     }
                   >

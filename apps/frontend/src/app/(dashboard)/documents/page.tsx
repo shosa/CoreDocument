@@ -113,16 +113,49 @@ export default function DocumentsPage() {
   const [allSuppliers, setAllSuppliers] = useState<string[]>([]);
   const [allYears, setAllYears] = useState<number[]>([]);
 
+  // Traccia l'URL corrente per detectare cambiamenti da Global Search
+  const [currentUrl, setCurrentUrl] = useState('');
+
   // Initialize filters from URL query params (usando window.location per evitare useSearchParams)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const supplierParam = params.get('supplier');
       const yearParam = params.get('year');
+      const docIdParam = params.get('docId');
+
       if (supplierParam) setSupplierFilter(supplierParam);
       if (yearParam) setYearFilter(yearParam);
+
+      // Se c'è docId, carica quel documento e apri preview
+      if (docIdParam) {
+        loadAndPreviewDocument(docIdParam);
+      }
+
+      // Salva URL corrente
+      setCurrentUrl(window.location.href);
     }
   }, []);
+
+  // Monitora cambiamenti URL (per navigazione da Global Search mentre sei già su /documents)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkUrlChange = setInterval(() => {
+      if (window.location.href !== currentUrl) {
+        setCurrentUrl(window.location.href);
+
+        const params = new URLSearchParams(window.location.search);
+        const docIdParam = params.get('docId');
+
+        if (docIdParam) {
+          loadAndPreviewDocument(docIdParam);
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(checkUrlChange);
+  }, [currentUrl]);
 
   // Carica liste filtri al mount
   useEffect(() => {
@@ -132,7 +165,7 @@ export default function DocumentsPage() {
   // Fetch documenti quando cambiano filtri
   useEffect(() => {
     fetchDocuments();
-  }, [supplierFilter, yearFilter, monthFilter]);
+  }, [supplierFilter, yearFilter, monthFilter, searchQuery]);
 
   const loadFilterOptions = async () => {
     try {
@@ -151,9 +184,22 @@ export default function DocumentsPage() {
     try {
       setLoading(true);
 
-      // Se non ci sono filtri, mostra documenti del mese corrente
-      // Altrimenti carica fino a 1000 risultati filtrati
-      const params: any = { limit: 1000 };
+      const params: any = { limit: 10000 };
+
+      // Se c'è una ricerca testuale, usa Meilisearch
+      if (searchQuery && searchQuery.trim()) {
+        params.q = searchQuery;
+        if (supplierFilter) params.supplier = supplierFilter;
+        if (yearFilter) params.year = parseInt(yearFilter);
+        if (monthFilter) params.month = monthFilter;
+
+        const response = await documentsApi.search(params);
+        setDocuments(response.data.data || response.data);
+        return;
+      }
+
+      // Controlla se ci sono filtri attivi (escluso searchQuery già gestito)
+      const hasActiveFilters = supplierFilter || yearFilter || monthFilter || docNumberFilter || dateFromFilter || dateToFilter;
 
       if (supplierFilter) {
         params.supplier = supplierFilter;
@@ -165,8 +211,8 @@ export default function DocumentsPage() {
         params.month = monthFilter;
       }
 
-      // Se nessun filtro è impostato, usa mese corrente
-      if (!supplierFilter && !yearFilter && !monthFilter) {
+      // Se nessun filtro è impostato, mostra solo mese corrente
+      if (!hasActiveFilters) {
         const now = new Date();
         const currentYear = now.getFullYear();
         const monthNames = [
@@ -215,6 +261,27 @@ export default function DocumentsPage() {
       enqueueSnackbar('Download avviato', { variant: 'success' });
     } catch (error) {
       enqueueSnackbar('Errore durante il download', { variant: 'error' });
+    }
+  };
+
+  const loadAndPreviewDocument = async (docId: string) => {
+    try {
+      // Carica il documento specifico
+      const response = await documentsApi.get(docId);
+      const doc = response.data;
+
+      // Aggiungi alla lista se non c'è già
+      setDocuments(prev => {
+        const exists = prev.find(d => d.id === docId);
+        return exists ? prev : [doc, ...prev];
+      });
+
+      // Apri preview
+      setPreviewDoc(doc);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+      setPreviewUrl(`${apiUrl}/documents/${doc.id}/view`);
+    } catch (error) {
+      enqueueSnackbar('Documento non trovato', { variant: 'error' });
     }
   };
 
