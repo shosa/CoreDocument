@@ -1,73 +1,114 @@
 # CoreDocument
 
-Sistema di gestione documentale per DDT arrivo merce - Versione modernizzata con NestJS e Next.js.
+Sistema di gestione documentale per DDT arrivo merce - Modernizzato con NestJS, Next.js 14 e ricerca full-text Meilisearch.
+
+## Architettura
+
+**Monorepo** con workspace npm per gestire backend e frontend come progetti collegati.
+
+```
+CoreDocument/
+├── apps/
+│   ├── backend/          # NestJS API + Prisma ORM
+│   └── frontend/         # Next.js 14 App Router + Material-UI
+├── scripts/              # Utility per import legacy e gestione
+├── docker-compose.yml    # Orchestrazione container
+├── .env                  # Configurazione centralizzata
+└── package.json          # Root workspace
+```
 
 ## Prerequisiti
 
-Prima di avviare CoreDocument, assicurati che **CoreServices** sia attivo:
+**CoreServices** deve essere attivo prima di avviare CoreDocument:
+
 ```bash
 cd ../CoreServices
 start.bat
 ```
 
-## Comandi Rapidi
+CoreServices fornisce:
+- MySQL (database)
+- MinIO (object storage)
+- Meilisearch (search engine)
+- Nginx centralizzato (reverse proxy)
+
+## Avvio Rapido
 
 ```bash
-# Avvia l'applicazione
+# Avvia applicazione (backend + frontend)
 start.bat
 
-# Ferma l'applicazione
+# Ferma applicazione
 stop.bat
 
-# Visualizza i log
+# Visualizza log in tempo reale
 logs.bat
 
-# Rebuild (dopo modifiche al codice)
+# Rebuild completo (dopo modifiche codice)
 build.bat
-build.bat --no-cache  # Rebuild completo
-```
 
-## Comandi Manuali
-
-```bash
-# Start
-docker-compose -p coredocument up -d
-
-# Stop
-docker-compose -p coredocument down
-
-# Build
-docker-compose -p coredocument build
-
-# Logs
-docker-compose -p coredocument logs -f [backend|frontend|nginx]
+# Rebuild solo un servizio
+build.bat backend
+build.bat frontend
 ```
 
 ## Accesso
 
-- **Frontend**: http://localhost:81
-- **Backend API**: http://localhost:81/api
-- **Frontend diretto**: http://localhost:3002 (solo per debug)
-- **Backend diretto**: http://localhost:3003/api (solo per debug)
+| Servizio | URL | Descrizione |
+|----------|-----|-------------|
+| **Applicazione** | http://localhost:81 | Frontend + API tramite nginx |
+| **API diretta** | http://localhost:81/api | Backend API |
+| **Frontend debug** | http://localhost:3002 | Next.js dev server (solo sviluppo) |
+| **Backend debug** | http://localhost:3003/api | NestJS diretto (solo sviluppo) |
 
-## Struttura
+## Funzionalità Principali
 
-```
-CoreDocument/
-├── apps/
-│   ├── backend/     # NestJS API
-│   └── frontend/    # Next.js UI
-├── nginx/           # Reverse proxy config
-├── docker-compose.yml
-├── .env
-└── package.json
-```
+### 📄 Gestione Documenti
+- **Upload singolo/multiplo** di PDF e immagini
+- **Metadati automatici**: fornitore, numero documento, data, mese, anno
+- **Storage su MinIO**: `documents/{year}/{month}/{day}/{filename}`
+- **Rinomina automatica**: file seguono formato `fornitore numero.ext`
+- **Preview inline**: visualizzazione PDF direttamente in app
+- **Download individuale** o **bulk download ZIP** con filtri
 
-## Database
+### 🔍 Ricerca Avanzata
+- **Full-text search** con Meilisearch (limite 10.000 documenti)
+- **Global search**: ricerca rapida da qualsiasi pagina
+- **Filtri multipli**: fornitore, anno, mese, numero documento, range date
+- **Apertura automatica**: click su risultato → preview immediata
+- **Ricerca intelligente**: trova anche match parziali (es. "AMBROSIANA" trova "CHIMICA INDUSTRIALE AMBROSIANA")
 
-CoreDocument usa il database `coredocument` su MySQL condiviso (CoreServices).
+### 🔐 Autenticazione e Autorizzazione
+- **Accesso pubblico**: visualizzazione e ricerca documenti
+- **Area admin** (login richiesto):
+  - Upload documenti
+  - Modifica metadati
+  - Eliminazione documenti
+  - Gestione utenti e tools
+- **JWT tokens** con validità 7 giorni
 
-### Creare il database (prima esecuzione)
+### 📦 Bulk Download
+- **Download ZIP** di documenti multipli
+- **Filtri opzionali**: fornitore, range date (da/a)
+- **Struttura organizzata**: `fornitore/anno/mese/file.pdf`
+- **Nome automatico**: `documenti_2025-01-15.zip`
+
+### 👥 Gestione per Fornitore
+- **Pagina dedicata** per ogni fornitore
+- **Statistiche**: totale documenti, ultimo documento
+- **Vista tabella** e **vista griglia**
+- **Filtri locali** per numero documento
+
+### 🎨 UI/UX
+- **Material-UI v6** con design moderno
+- **Responsive**: funziona su desktop, tablet, mobile
+- **Dark mode ready** (tema configurabile)
+- **Skeleton loading** e stati di caricamento
+- **Notifiche snackbar** per feedback utente
+
+## Prima Esecuzione
+
+### 1. Crea Database
 
 ```bash
 docker exec core-mysql mysql -uroot -prootpassword -e "
@@ -78,118 +119,376 @@ FLUSH PRIVILEGES;
 "
 ```
 
-## Funzionalità
+### 2. Configura Environment
 
-### Gestione Documenti
-- **Upload documenti** (PDF, immagini) su MinIO
-- **Metadati**: fornitore, numero documento, data
-- **Organizzazione automatica**: anno/mese/giorno
-- **Download** documenti
-- **Modifica/Eliminazione** documenti
+Il file `.env` contiene tutte le configurazioni. Già configurato per funzionare con CoreServices:
 
-### Ricerca Avanzata
-- **Full-text search** con Meilisearch
-- **Filtri multipli**: fornitore, numero doc, data, mese, anno
-- **Ricerca veloce** e real-time
+```env
+# Database
+DATABASE_URL=mysql://root:rootpassword@core-mysql:3306/coredocument
 
-### Preferiti
-- **Aggiungi/rimuovi** documenti preferiti
-- **Lista personale** per ogni utente
+# MinIO
+MINIO_ENDPOINT=core-minio
+MINIO_PORT=9000
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin123
 
-### Storage
-- **MinIO** per file storage (non più cartella di rete)
-- **Path structure**: `documents/{year}/{month}/{day}/{filename}`
-- **Backup e replica** facili
+# Meilisearch
+MEILISEARCH_HOST=http://core-meilisearch:7700
+MEILISEARCH_API_KEY=masterKeyChangeThis
+
+# API
+APP_PORT=3003
+NEXT_PUBLIC_API_URL=http://localhost:81/api
+```
+
+### 3. Avvia Container
+
+```bash
+# Assicurati che CoreServices sia avviato
+cd ../CoreServices && start.bat && cd ../CoreDocument
+
+# Avvia CoreDocument
+start.bat
+```
+
+Al primo avvio, Prisma eseguirà automaticamente le migrations e il seed del database.
+
+### 4. Accedi
+
+Vai su http://localhost:81
+
+**Credenziali admin** (create dal seed):
+- Email: `admin@coredocument.com`
+- Password: `admin123`
 
 ## Sviluppo
 
-### Modifiche al Backend
+### Sviluppo Locale (senza Docker)
 
 ```bash
-# 1. Modifica il codice in apps/backend
-# 2. Rebuild
-build.bat backend
-# 3. Restart
-stop.bat && start.bat
-```
+# 1. Installa dipendenze
+npm install
 
-### Modifiche al Frontend
+# 2. Avvia backend
+npm run dev:backend
 
-```bash
-# 1. Modifica il codice in apps/frontend
-# 2. Rebuild
-build.bat frontend
-# 3. Restart
-stop.bat && start.bat
+# 3. In un altro terminale, avvia frontend
+npm run dev:frontend
+
+# Backend: http://localhost:3003
+# Frontend: http://localhost:3000
 ```
 
 ### Modifiche al Database (Prisma)
 
 ```bash
-# 1. Modifica apps/backend/prisma/schema.prisma
+# 1. Modifica schema
+code apps/backend/prisma/schema.prisma
+
 # 2. Crea migration
 docker exec coredocument-backend npx prisma migrate dev --name nome_migration
-# 3. Rebuild backend
+
+# 3. Rigenera client Prisma
+docker exec coredocument-backend npx prisma generate
+
+# 4. Rebuild backend
 build.bat backend
 ```
 
-## Differenze dalla versione Python
+### Prisma Studio (GUI Database)
 
-### Miglioramenti
-- ✅ **Storage su MinIO** invece di cartella di rete Windows
-- ✅ **Ricerca con Meilisearch** più veloce e potente
-- ✅ **UI moderna** con Material-UI
-- ✅ **API RESTful** ben strutturata
-- ✅ **Autenticazione JWT** sicura
-- ✅ **Docker** per deploy facile
-- ✅ **TypeScript** per type safety
+```bash
+docker exec -it coredocument-backend npx prisma studio
+# Apri http://localhost:5555
+```
 
-### Funzionalità mantenute
-- ✅ Upload documenti DDT
-- ✅ Ricerca per fornitore, numero, data
-- ✅ Preferiti personali
-- ✅ Gestione metadati
-- ✅ Download documenti
+### Seed Database
 
-### Da implementare (opzionale)
-- ✅ **Scanner filesystem per importare documenti esistenti** → Vedi [scripts/README.md](scripts/README.md)
-- ⏳ Admin panel per gestione database
-- ⏳ Statistiche e dashboard
+```bash
+# Reset database + seed
+docker exec coredocument-backend npx prisma migrate reset
 
-## Network
-
-CoreDocument si connette alla network `core-network` (creata da CoreServices) per accedere a MySQL, MinIO e Meilisearch.
+# Solo seed
+docker exec coredocument-backend npm run seed
+```
 
 ## Import Documenti Legacy
 
-Per importare documenti dalla vecchia struttura (cartella di rete Y:\) al nuovo sistema:
+Script Node.js per importare documenti da cartella di rete Windows (Y:\DDT\) al nuovo sistema.
+
+### Installazione
 
 ```bash
 cd scripts
 npm install
-
-# Test funzioni
-npm test
-
-# Dry run (simulazione)
-node import-legacy-documents.js --dry-run --source Y:\
-
-# Test su un mese
-node import-legacy-documents.js --test --year 2023 --month GENNAIO --source Y:\ --token YOUR_JWT_TOKEN
-
-# Import completo
-node import-legacy-documents.js --source Y:\ --token YOUR_JWT_TOKEN --verbose
 ```
 
-**Documentazione completa:** [scripts/README.md](scripts/README.md)
+### Comandi
 
-## Porte utilizzate
+```bash
+# Test connessione API
+node import-legacy-documents.js --dry-run --source Y:\
 
-- **80**: CoreMachine (nginx)
-- **81**: CoreDocument (nginx) ← Questa applicazione
-- **3001**: CoreMachine backend
-- **3002**: CoreDocument frontend ← Questa applicazione (host)
-- **3003**: CoreDocument backend ← Questa applicazione (host)
-- **8080**: PHPMyAdmin
-- **9000/9001**: MinIO
-- **7700**: Meilisearch
+# Import singolo mese (test)
+node import-legacy-documents.js \
+  --source Y:\ \
+  --test \
+  --year 2025 \
+  --month Gennaio \
+  --token "YOUR_JWT_TOKEN"
+
+# Import completo
+node import-legacy-documents.js \
+  --source Y:\ \
+  --token "YOUR_JWT_TOKEN" \
+  --verbose
+```
+
+**Ottenere JWT Token**:
+1. Login su http://localhost:81
+2. Apri DevTools → Console
+3. Esegui: `localStorage.getItem('auth-token')`
+
+**Struttura attesa**:
+```
+Y:\DDT\
+├── 2023\
+│   ├── GENNAIO\
+│   │   └── fornitore\
+│   │       ├── doc1.pdf
+│   │       └── doc2.pdf
+│   └── FEBBRAIO\
+└── 2024\
+```
+
+Il file verrà rinominato automaticamente in formato: `fornitore numero.pdf`
+
+## Comandi Docker Utili
+
+```bash
+# Restart singolo servizio
+docker restart coredocument-backend
+docker restart coredocument-frontend
+
+# Shell nei container
+docker exec -it coredocument-backend sh
+docker exec -it coredocument-frontend sh
+
+# Logs specifici
+docker logs coredocument-backend -f
+docker logs coredocument-frontend -f
+
+# Stato container
+docker ps --filter "name=coredocument"
+
+# Rimozione completa (attenzione: elimina anche volumi)
+docker-compose -p coredocument down -v
+```
+
+## Database
+
+### Schema Principale
+
+```prisma
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Document {
+  id            String   @id @default(uuid())
+  filename      String
+  minioKey      String   @unique
+  supplier      String?
+  docNumber     String?
+  date          DateTime
+  month         String
+  year          Int
+  fileSize      BigInt
+  fileExtension String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([supplier])
+  @@index([year, month])
+  @@index([date])
+}
+```
+
+### Indici Meilisearch
+
+```javascript
+searchableAttributes: ['supplier', 'docNumber', 'fileName']
+filterableAttributes: ['year', 'month', 'date', 'supplier', 'docNumber']
+sortableAttributes: ['date', 'createdAt']
+```
+
+## Porte Utilizzate
+
+| Porta | Servizio | Descrizione |
+|-------|----------|-------------|
+| 81 | Nginx | Accesso pubblico (frontend + API) |
+| 3002 | Frontend | Next.js dev server (host) |
+| 3003 | Backend | NestJS API (host) |
+
+**Porte CoreServices**:
+- 80: CoreMachine
+- 3306: MySQL
+- 8080: PHPMyAdmin
+- 9000/9001: MinIO
+- 7700: Meilisearch
+
+## Troubleshooting
+
+### Container non si avvia
+
+```bash
+# Controlla logs
+logs.bat
+
+# Verifica network
+docker network inspect core-network
+
+# Verifica CoreServices
+cd ../CoreServices && docker ps
+```
+
+### Database non raggiungibile
+
+```bash
+# Verifica MySQL
+docker exec core-mysql mysql -uroot -prootpassword -e "SHOW DATABASES;"
+
+# Ricrea database
+docker exec core-mysql mysql -uroot -prootpassword -e "
+DROP DATABASE IF EXISTS coredocument;
+CREATE DATABASE coredocument;
+"
+
+# Re-run migrations
+docker exec coredocument-backend npx prisma migrate deploy
+```
+
+### MinIO non raggiungibile
+
+```bash
+# Verifica MinIO
+curl http://localhost:9000/minio/health/live
+
+# Console MinIO
+# http://localhost:9001
+# User: minioadmin
+# Pass: minioadmin123
+```
+
+### Meilisearch non indicizza
+
+```bash
+# Verifica indice
+curl http://localhost:7700/indexes
+
+# Re-sync documenti
+docker exec coredocument-backend node -e "
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+prisma.document.findMany().then(docs => console.log('Docs:', docs.length));
+"
+```
+
+### Frontend 404 su assets
+
+Problema: nginx non configurato correttamente.
+
+Soluzione: CoreServices gestisce nginx centralizzato su porta 81.
+
+```bash
+# Verifica nginx
+docker ps --filter "name=nginx"
+
+# Se presente nginx locale, fermalo
+docker stop coredocument-nginx
+```
+
+## Stack Tecnologico
+
+### Backend
+- **NestJS** v10 - Framework Node.js enterprise
+- **Prisma** v5 - ORM con type-safety
+- **MySQL** - Database relazionale
+- **JWT** - Autenticazione stateless
+- **MinIO** - Object storage S3-compatible
+- **Meilisearch** - Full-text search engine
+- **Archiver** - Creazione ZIP per bulk download
+
+### Frontend
+- **Next.js** v14 - React framework con App Router
+- **React** v18 - UI library
+- **Material-UI** v6 - Component library
+- **Axios** - HTTP client
+- **Notistack** - Toast notifications
+- **date-fns** - Date manipulation
+- **Zustand** - State management
+
+### DevOps
+- **Docker** - Containerization
+- **Docker Compose** - Multi-container orchestration
+- **Nginx** - Reverse proxy (centralizzato in CoreServices)
+
+## Differenze da Versione Legacy (Python)
+
+### Miglioramenti ✅
+- Storage su **MinIO** invece di cartella rete Windows
+- Ricerca con **Meilisearch** più veloce e scalabile
+- **UI moderna** responsive con Material-UI
+- **API RESTful** ben strutturata
+- **TypeScript** end-to-end per type safety
+- **Monorepo** con workspace condivisi
+- **Preview inline** PDF senza download
+- **Bulk download ZIP** con filtri avanzati
+- **Global search** con apertura automatica preview
+- **Autenticazione JWT** sicura
+- **Docker** per deploy consistente
+
+### Funzionalità Mantenute ✅
+- Upload documenti DDT
+- Ricerca per fornitore, numero, data
+- Gestione metadati
+- Download documenti
+- Organizzazione per anno/mese
+
+### Nuove Feature 🆕
+- **Edit documenti**: modifica metadati post-upload
+- **Bulk download**: download multipli in ZIP
+- **Global search**: ricerca rapida da header
+- **Auto-preview**: click su risultato → preview immediata
+- **Rename automatico**: file seguono formato standard
+- **Accesso pubblico**: no login per visualizzazione
+- **Admin panel**: gestione utenti e permessi
+
+## Roadmap
+
+- [ ] Dashboard con statistiche e grafici
+- [ ] Export CSV/Excel per reportistica
+- [ ] Notifiche email per documenti nuovi
+- [ ] OCR per estrazione automatica metadati
+- [ ] Versioning documenti
+- [ ] Commenti e annotazioni
+- [ ] Workflow approvazione documenti
+- [ ] Integrazione con CoreMachine
+
+## Supporto
+
+Per problemi o domande, consulta:
+- Logs: `logs.bat`
+- CoreServices: `../CoreServices/README.md`
+- Docker compose: `docker-compose.yml`
+
+## Licenza
+
+Uso interno aziendale.
