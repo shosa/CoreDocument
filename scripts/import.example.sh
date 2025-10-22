@@ -45,7 +45,7 @@ fi
 # Ottieni il token
 TOKEN_RESPONSE=$(curl -s -X POST "$LOGIN_URL" \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"'$EMAIL'\",\"password\":\"'$PASSWORD'\"}")
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
 # Estrai il token dal JSON di risposta
 export JWT_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
