@@ -29,11 +29,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('auth-token');
-      localStorage.removeItem('auth-user');
-      localStorage.removeItem('auth-storage');
-      window.location.href = '/login';
+    // App pubblica: NON facciamo redirect automatico sui 401
+    // Le pagine protette (come /tools) gestiranno l'autenticazione autonomamente
+    // Se ricevi un 401 e hai un token, probabilmente è scaduto - rimuovilo
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth-token');
+      if (token) {
+        // Token scaduto o invalido, rimuovilo
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('auth-user');
+        localStorage.removeItem('auth-storage');
+      }
     }
     return Promise.reject(error);
   }

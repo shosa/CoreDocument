@@ -71,6 +71,6 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
 USER nestjs
 
-EXPOSE 3002
+EXPOSE 3003
 
 CMD ["node", "dist/main"]

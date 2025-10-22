@@ -10,23 +10,25 @@ services:
     container_name: coredocument-backend
     restart: unless-stopped
     environment:
-      # Database - usa il MySQL condiviso (in Docker usa 'mysql' come host)
-      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      # Database - usa il MySQL condiviso da CoreMachine
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@core-mysql:3306/${MYSQL_DATABASE}
 
       # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
 
-      # MinIO - usa il MinIO condiviso (in Docker usa 'minio' come host)
-      MINIO_ENDPOINT: minio
+      # MinIO - usa il MinIO condiviso da CoreMachine
+      MINIO_ENDPOINT: core-minio
       MINIO_PORT: ${MINIO_PORT}
       MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
 
-      # Meilisearch - usa il Meilisearch condiviso (in Docker usa 'meilisearch' come host)
-      MEILISEARCH_HOST: http://meilisearch:7700
+      # Meilisearch - usa il Meilisearch condiviso da CoreMachine
+      MEILISEARCH_HOST: http://core-meilisearch:7700
       MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
 
       # App

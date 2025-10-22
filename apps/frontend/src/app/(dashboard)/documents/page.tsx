@@ -1,7 +1,10 @@
 'use client';
 
+// Force dynamic rendering - questa pagina usa useSearchParams e API calls
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Button,
@@ -30,6 +33,7 @@ import {
   Add,
   Delete,
   Download,
+  Edit,
   Search as SearchIcon,
   ViewModule,
   ViewList,
@@ -46,6 +50,7 @@ import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuthStore } from '@/store/authStore';
 
 type ViewMode = 'grid' | 'table';
 
@@ -79,8 +84,8 @@ const MONTHS = [
 
 export default function DocumentsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { enqueueSnackbar } = useSnackbar();
+  const { isAuthenticated } = useAuthStore();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,13 +106,16 @@ export default function DocumentsPage() {
   const [allSuppliers, setAllSuppliers] = useState<string[]>([]);
   const [allYears, setAllYears] = useState<number[]>([]);
 
-  // Initialize filters from URL query params
+  // Initialize filters from URL query params (usando window.location per evitare useSearchParams)
   useEffect(() => {
-    const supplierParam = searchParams.get('supplier');
-    const yearParam = searchParams.get('year');
-    if (supplierParam) setSupplierFilter(supplierParam);
-    if (yearParam) setYearFilter(yearParam);
-  }, [searchParams]);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const supplierParam = params.get('supplier');
+      const yearParam = params.get('year');
+      if (supplierParam) setSupplierFilter(supplierParam);
+      if (yearParam) setYearFilter(yearParam);
+    }
+  }, []);
 
   // Carica liste filtri al mount
   useEffect(() => {
@@ -135,14 +143,34 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      // Se non ci sono filtri, carica solo gli ultimi 25 documenti
-      // Altrimenti carica fino a 1000 risultati filtrati
-      const defaultLimit = (supplierFilter || yearFilter || monthFilter) ? 1000 : 25;
-      const params: any = { limit: defaultLimit };
 
-      if (supplierFilter) params.supplier = supplierFilter;
-      if (yearFilter) params.year = parseInt(yearFilter);
-      if (monthFilter) params.month = monthFilter;
+      // Se non ci sono filtri, mostra documenti del mese corrente
+      // Altrimenti carica fino a 1000 risultati filtrati
+      const params: any = { limit: 1000 };
+
+      if (supplierFilter) {
+        params.supplier = supplierFilter;
+      }
+      if (yearFilter) {
+        params.year = parseInt(yearFilter);
+      }
+      if (monthFilter) {
+        params.month = monthFilter;
+      }
+
+      // Se nessun filtro è impostato, usa mese corrente
+      if (!supplierFilter && !yearFilter && !monthFilter) {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        const currentMonth = monthNames[now.getMonth()];
+
+        params.year = currentYear;
+        params.month = currentMonth;
+      }
 
       const response = await documentsApi.list(params);
       setDocuments(response.data.data || response.data);
@@ -272,7 +300,7 @@ export default function DocumentsPage() {
     {
       field: 'actions',
       headerName: 'Azioni',
-      width: 160,
+      width: 200,
       sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '100%' }}>
@@ -302,19 +330,36 @@ export default function DocumentsPage() {
           >
             <Download fontSize="small" />
           </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDelete(params.row.id)}
-            title="Elimina"
-            sx={{
-              bgcolor: 'black',
-              color: 'white',
-              borderRadius: '6px',
-              '&:hover': { bgcolor: 'grey.800' },
-            }}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          {isAuthenticated && (
+            <>
+              <IconButton
+                size="small"
+                onClick={() => router.push(`/documents/${params.row.id}/edit`)}
+                title="Modifica"
+                sx={{
+                  bgcolor: 'black',
+                  color: 'white',
+                  borderRadius: '6px',
+                  '&:hover': { bgcolor: 'grey.800' },
+                }}
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => handleDelete(params.row.id)}
+                title="Elimina"
+                sx={{
+                  bgcolor: 'black',
+                  color: 'white',
+                  borderRadius: '6px',
+                  '&:hover': { bgcolor: 'grey.800' },
+                }}
+              >
+                <Delete fontSize="small" />
+              </IconButton>
+            </>
+          )}
         </Box>
       ),
     },
@@ -325,13 +370,15 @@ export default function DocumentsPage() {
       <PageHeader
         title="Documenti"
         action={
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => router.push('/documents/new')}
-          >
-            Carica Nuovo
-          </Button>
+          isAuthenticated ? (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => router.push('/documents/new')}
+            >
+              Carica Nuovo
+            </Button>
+          ) : undefined
         }
       />
 
@@ -384,6 +431,15 @@ export default function DocumentsPage() {
             </Grid>
           </Grid>
         </Box>
+
+        {/* Info documenti visualizzati */}
+        {!supplierFilter && !yearFilter && !monthFilter && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Visualizzazione documenti del mese corrente. Usa i filtri per cercare in altri periodi.
+            </Typography>
+          </Box>
+        )}
 
         {/* Pannello Filtri Avanzati */}
         <Collapse in={showFilters}>
@@ -485,11 +541,11 @@ export default function DocumentsPage() {
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
             {filteredDocuments.length} documento{filteredDocuments.length !== 1 ? 'i' : ''}
-            {!supplierFilter && !yearFilter && !monthFilter && ' (ultimi 25)'}
+            {!supplierFilter && !yearFilter && !monthFilter && ' (mese corrente)'}
           </Typography>
           {!supplierFilter && !yearFilter && !monthFilter && (
             <Typography variant="caption" color="text.secondary">
-              Usa i filtri per cercare documenti specifici
+              Usa i filtri per cercare documenti in altri periodi
             </Typography>
           )}
         </Box>
@@ -554,9 +610,16 @@ export default function DocumentsPage() {
                     <IconButton size="small" onClick={() => handleDownload(doc.id)}>
                       <Download />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(doc.id)}>
-                      <Delete />
-                    </IconButton>
+                    {isAuthenticated && (
+                      <>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); router.push(`/documents/${doc.id}/edit`); }}>
+                          <Edit />
+                        </IconButton>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}>
+                          <Delete />
+                        </IconButton>
+                      </>
+                    )}
                   </Stack>
                 </Paper>
               </Grid>

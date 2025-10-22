@@ -1,10 +1,11 @@
-node_modules
-npm-debug.log
-.next
-.git
-.gitignore
+# Dockerignore per build con node_modules locali
+# NON ignora node_modules perché li copiamo
+
+# Build outputs (li ricreiamo comunque)
 dist
-build
+.next/cache
+.next/trace
+out
 
 # Environment files (exclude ALL .env files from Docker builds)
 .env
@@ -14,22 +15,54 @@ apps/**/.env
 apps/**/.env.*
 !apps/**/.env.example
 
+# Version control
+.git
+.gitignore
+
 # IDE
 .vscode
 .idea
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Testing
+coverage
+.nyc_output
+test
+tests
+**/*.test.ts
+**/*.spec.ts
+
 # Logs
 logs
 *.log
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
 
-# Prisma
-apps/backend/prisma/migrations
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE.md
+PORTS.md
 
-# Build artifacts
-apps/backend/dist
-apps/frontend/.next
-apps/frontend/out
+# Docker files
+docker-compose*.yml
+
+# Scripts (non necessari nel container)
+scripts
+
+# Import files (non necessari nel container)
+attualedaimportare.txt
+attualedaimportareconfile.txt
+import-legacy-documents.js
+
+# Misc
+.editorconfig
+.prettierrc
+.eslintrc*

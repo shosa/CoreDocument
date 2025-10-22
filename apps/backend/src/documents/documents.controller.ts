@@ -23,11 +23,11 @@ import { QueryDocumentDto } from './dto/query-document.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('documents')
-@UseGuards(JwtAuthGuard)
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard) // Solo admin possono caricare
   @UseInterceptors(FileInterceptor('file'))
   async create(
     @Body() createDocumentDto: CreateDocumentDto,
@@ -37,6 +37,7 @@ export class DocumentsController {
   }
 
   @Post('bulk-upload')
+  @UseGuards(JwtAuthGuard) // Solo admin possono caricare
   @UseInterceptors(FilesInterceptor('files', 50)) // Max 50 files
   async bulkUpload(
     @Body() body: any,
@@ -48,21 +49,25 @@ export class DocumentsController {
   }
 
   @Get('metadata/filters')
+  // Accesso pubblico - nessun guard
   async getFiltersMetadata() {
     return this.documentsService.getFiltersMetadata();
   }
 
   @Get()
+  // Accesso pubblico - nessun guard
   async findAll(@Query() query: QueryDocumentDto) {
     return this.documentsService.findAll(query);
   }
 
   @Get(':id')
+  // Accesso pubblico - nessun guard
   async findOne(@Param('id') id: string) {
     return this.documentsService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard) // Solo admin possono modificare
   async update(
     @Param('id') id: string,
     @Body() updateDocumentDto: UpdateDocumentDto,
@@ -71,16 +76,19 @@ export class DocumentsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard) // Solo admin possono eliminare
   async remove(@Param('id') id: string) {
     return this.documentsService.remove(id);
   }
 
   @Get(':id/download-url')
+  // Accesso pubblico - nessun guard
   async getDownloadUrl(@Param('id') id: string) {
     return this.documentsService.getDownloadUrl(id);
   }
 
   @Get(':id/download')
+  // Accesso pubblico - nessun guard
   async download(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     const { stream, fileName } = await this.documentsService.getFileStream(id);
 

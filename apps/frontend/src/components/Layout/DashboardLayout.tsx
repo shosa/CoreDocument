@@ -25,6 +25,7 @@ import {
   Star as FavoritesIcon,
   Search as SearchIcon,
   Logout as LogoutIcon,
+  Login as LoginIcon,
   ExpandLess,
   ExpandMore,
   ChevronLeft as ChevronLeftIcon,
@@ -241,7 +242,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <List>{filterNavItems(navigationItems).map(renderNavItem)}</List>
       </Box>
       <Divider sx={{ borderColor: 'grey.800' }} />
-      {user && (
+      {user ? (
         <Box
           sx={{
             p: 2,
@@ -263,6 +264,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Typography>
               <Typography variant="caption" noWrap>
                 {user.role}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: 'grey.800',
+            },
+          }}
+          onClick={() => router.push('/login')}
+        >
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              bgcolor: 'grey.700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <LoginIcon />
+          </Box>
+          {!sidebarCollapsed && (
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="body2" fontWeight={600} noWrap>
+                ACCEDI
+              </Typography>
+              <Typography variant="caption" noWrap>
+                Area amministrativa
               </Typography>
             </Box>
           )}

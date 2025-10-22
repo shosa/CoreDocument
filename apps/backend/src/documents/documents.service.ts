@@ -239,12 +239,20 @@ export class DocumentsService {
     const document = await this.findOne(id);
 
     const updateData: any = {};
+    let needsFileRename = false;
+    let newSupplier = document.supplier;
+    let newDocNumber = document.docNumber;
+    let newDate = new Date(document.date);
 
     if (updateDocumentDto.supplier !== undefined) {
       updateData.supplier = updateDocumentDto.supplier;
+      newSupplier = updateDocumentDto.supplier;
+      needsFileRename = true;
     }
     if (updateDocumentDto.docNumber !== undefined) {
       updateData.docNumber = updateDocumentDto.docNumber;
+      newDocNumber = updateDocumentDto.docNumber;
+      needsFileRename = true;
     }
     if (updateDocumentDto.date) {
       const docDate = new Date(updateDocumentDto.date);
@@ -255,6 +263,51 @@ export class DocumentsService {
       updateData.date = docDate;
       updateData.month = monthNames[docDate.getMonth()];
       updateData.year = docDate.getFullYear();
+      newDate = docDate;
+      needsFileRename = true;
+    }
+
+    // Se cambia supplier, docNumber o date, dobbiamo rinominare il file su MinIO
+    if (needsFileRename) {
+      try {
+        // Scarica il file esistente
+        const fileStream = await this.minio.getFileStream(document.minioKey);
+        const chunks: Buffer[] = [];
+        for await (const chunk of fileStream) {
+          chunks.push(chunk);
+        }
+        const fileBuffer = Buffer.concat(chunks);
+
+        // Ottieni l'estensione dal filename originale
+        const fileExtension = document.filename.split('.').pop() || 'pdf';
+        const fileStat = await this.minio.getFileStat(document.minioKey);
+
+        // Crea file object per uploadDocument
+        const fileObj: Express.Multer.File = {
+          buffer: fileBuffer,
+          originalname: document.filename,
+          mimetype: fileStat.metaData['content-type'] || 'application/pdf',
+          size: fileStat.size,
+        } as any;
+
+        // Upload con nuovo nome
+        const { filePath: newFilePath, fileName: newFileName } = await this.minio.uploadDocument(
+          fileObj,
+          newDate,
+          newSupplier,
+          newDocNumber,
+        );
+
+        // Elimina vecchio file
+        await this.minio.deleteFile(document.minioKey);
+
+        // Aggiorna i dati con nuovo path e filename
+        updateData.minioKey = newFilePath;
+        updateData.filename = newFileName;
+      } catch (error) {
+        console.error('Error renaming file on MinIO:', error);
+        throw new Error('Failed to rename file on MinIO');
+      }
     }
 
     const updatedDocument = await this.prisma.document.update({

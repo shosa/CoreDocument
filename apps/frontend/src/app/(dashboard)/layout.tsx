@@ -1,39 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import DashboardLayout from '@/components/Layout/DashboardLayout';
-import { CircularProgress, Box } from '@mui/material';
+// Force tutte le pagine dashboard a rendering dinamico
+export const dynamic = 'force-dynamic';
 
-export default function AuthenticatedLayout({
+import DashboardLayout from '@/components/Layout/DashboardLayout';
+
+export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
+  // Layout pubblico - accesso libero senza autenticazione
   return <DashboardLayout>{children}</DashboardLayout>;
 }

@@ -1,6 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Tabs,
@@ -35,11 +38,13 @@ import {
   Warning,
   MergeType,
   CleaningServices,
+  Lock,
 } from '@mui/icons-material';
 import PageHeader from '@/components/PageHeader';
 import Widget from '@/components/Widget';
 import { documentsApi } from '@/lib/api';
 import { useSnackbar } from 'notistack';
+import { useAuthStore } from '@/store/authStore';
 
 interface Document {
   id: string;
@@ -72,9 +77,14 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function ToolsPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
   const { enqueueSnackbar } = useSnackbar();
+
+  // TUTTI gli useState devono essere dichiarati PRIMA di qualsiasi return!
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Anomalie documenti
   const [anomalousDocuments, setAnomalousDocuments] = useState<Document[]>([]);
@@ -92,21 +102,62 @@ export default function ToolsPage() {
   // Whitelist per falsi positivi (salvata in localStorage)
   const [ignoredPairs, setIgnoredPairs] = useState<Set<string>>(new Set());
 
+  // Controllo autenticazione admin
   useEffect(() => {
-    // Carica whitelist da localStorage
+    const timer = setTimeout(() => {
+      setAuthChecked(true);
+      // Non facciamo redirect automatico né mostriamo notifiche
+      // L'utente vedrà semplicemente "Area Riservata" e potrà cliccare su "Accedi"
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Carica whitelist da localStorage
+  useEffect(() => {
     const stored = localStorage.getItem('coredocument_ignored_supplier_pairs');
     if (stored) {
       setIgnoredPairs(new Set(JSON.parse(stored)));
     }
   }, []);
 
+  // Carica dati quando cambia tab
   useEffect(() => {
-    if (tabValue === 0) {
-      findAnomalousDocuments();
-    } else if (tabValue === 1) {
-      findDuplicateSuppliers();
+    if (authChecked && isAuthenticated && user?.role === 'ADMIN') {
+      if (tabValue === 0) {
+        findAnomalousDocuments();
+      } else if (tabValue === 1) {
+        findDuplicateSuppliers();
+      }
     }
-  }, [tabValue]);
+  }, [tabValue, authChecked, isAuthenticated, user]);
+
+  // Mostra schermata di accesso negato durante il controllo
+  if (!authChecked || !isAuthenticated || !user || user.role !== 'ADMIN') {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
+          gap: 3,
+        }}
+      >
+        <Lock sx={{ fontSize: 64, color: 'text.secondary' }} />
+        <Typography variant="h5" color="text.secondary">
+          Area Riservata
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Questa sezione è accessibile solo agli amministratori.
+        </Typography>
+        <Button variant="contained" onClick={() => router.push('/login')}>
+          Accedi
+        </Button>
+      </Box>
+    );
+  }
 
   const findAnomalousDocuments = async () => {
     try {
