@@ -40,7 +40,7 @@ TOKEN_RESPONSE=$(curl -s -X POST "$LOGIN_URL" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
 # Estrai il token dal JSON di risposta
-JWT_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+export JWT_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
 
 # Controlla se il token è stato ottenuto
 if [ -z "$JWT_TOKEN" ] || [ "$JWT_TOKEN" == "null" ]; then
