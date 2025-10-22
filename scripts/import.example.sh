@@ -23,8 +23,27 @@ PASSWORD="admin123"
 # NON MODIFICARE SOTTO QUESTA LINEA
 # ============================================================================ 
 
-echo ""
 echo "========================================"
+
+
+
+if [ $? -eq 0 ]; then
+
+    echo "[OK] Import completato con successo!"
+
+else
+
+    echo "[ERRORE] Import fallito. Controlla import-log.json"
+
+fi
+
+
+
+echo ""
+
+read -p "Premi Invio per continuare..."
+
+"
 echo "  CoreDocument - Import Documenti"
 echo "========================================"
 echo ""
@@ -89,4 +108,22 @@ node import-legacy-documents.js \
     --verbose
 
 echo ""
-echo "========================================
+echo "========================================"
+
+if [ $? -eq 0 ]; then
+    echo "[OK] Import completato con successo!"
+else
+    echo "[ERRORE] Import fallito. Controlla import-log.json"
+fi
+
+echo ""
+read -p "Premi Invio per continuare...""
+
+if [ $? -eq 0 ]; then
+    echo "[OK] Import completato con successo!"
+else
+    echo "[ERRORE] Import fallito. Controlla import-log.json"
+fi
+
+echo ""
+read -p "Premi Invio per continuare..."
