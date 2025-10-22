@@ -60,22 +60,8 @@ services:
     networks:
       - core-network  # Usa la network condivisa
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: coredocument-nginx
-    restart: unless-stopped
-    ports:
-      - "81:80"
-      - "444:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - core-network  # Usa la network condivisa
+# Nginx è gestito centralmente da CoreServices (core-nginx)
+# Accesso: http://localhost:81
 
 # Usa la network esterna creata da CoreServices
 networks:
