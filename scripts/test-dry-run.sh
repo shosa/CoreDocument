@@ -11,7 +11,7 @@ echo "Utile per verificare che lo script funzioni correttamente."
 echo ""
 
 # Path alla cartella sorgente documenti
-export SOURCE_PATH="/mnt/y" # Esempio per un mount point, modifica se necessario
+export SOURCE_PATH="/mnt/DOCUMENTI"
 
 echo "Source: $SOURCE_PATH"
 echo ""

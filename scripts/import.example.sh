@@ -7,7 +7,7 @@
 # ============================================================================ 
 
 # Path alla cartella sorgente documenti
-export SOURCE_PATH="/mnt/y" # Esempio per un mount point, modifica se necessario
+export SOURCE_PATH="/mnt/DOCUMENTI"
 
 # API URL (default: http://localhost:81/api)
 export API_URL="http://localhost:81/api"
