@@ -13,6 +13,7 @@ import {
   Query,
   Res,
   StreamableFile,
+  Header,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -112,5 +113,25 @@ export class DocumentsController {
     });
 
     return new StreamableFile(stream);
+  }
+
+  @Get('bulk-download/zip')
+  // Accesso pubblico - nessun guard
+  async bulkDownload(
+    @Query() query: QueryDocumentDto,
+    @Res() res: Response,
+  ) {
+    const zipStream = await this.documentsService.bulkDownloadZip(query);
+
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const filename = `documenti_${dateStr}.zip`;
+
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+
+    zipStream.pipe(res);
   }
 }

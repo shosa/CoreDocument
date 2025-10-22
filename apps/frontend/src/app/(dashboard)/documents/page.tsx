@@ -42,6 +42,7 @@ import {
   Clear,
   ExpandMore,
   ExpandLess,
+  FileDownload,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import PageHeader from '@/components/PageHeader';
@@ -93,6 +94,7 @@ export default function DocumentsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [bulkDownloadDialog, setBulkDownloadDialog] = useState(false);
 
   // Filtri
   const [supplierFilter, setSupplierFilter] = useState('');
@@ -101,6 +103,11 @@ export default function DocumentsPage() {
   const [docNumberFilter, setDocNumberFilter] = useState('');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
+
+  // Filtri per bulk download
+  const [bulkSupplier, setBulkSupplier] = useState('');
+  const [bulkDateFrom, setBulkDateFrom] = useState('');
+  const [bulkDateTo, setBulkDateTo] = useState('');
 
   // Liste per filtri (caricate da TUTTO il database)
   const [allSuppliers, setAllSuppliers] = useState<string[]>([]);
@@ -237,6 +244,27 @@ export default function DocumentsPage() {
     setSearchQuery('');
   };
 
+  const handleBulkDownload = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+      const params = new URLSearchParams();
+
+      if (bulkSupplier) params.append('supplier', bulkSupplier);
+      if (bulkDateFrom) params.append('dateFrom', bulkDateFrom);
+      if (bulkDateTo) params.append('dateTo', bulkDateTo);
+
+      const url = `${apiUrl}/documents/bulk-download/zip?${params.toString()}`;
+
+      // Apri il download in una nuova finestra
+      window.open(url, '_blank');
+
+      enqueueSnackbar('Download ZIP avviato', { variant: 'success' });
+      setBulkDownloadDialog(false);
+    } catch (error) {
+      enqueueSnackbar('Errore durante il download bulk', { variant: 'error' });
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     const kb = bytes / 1024;
     return kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
@@ -370,16 +398,25 @@ export default function DocumentsPage() {
     <Box>
       <PageHeader
         title="Documenti"
-        action={
-          isAuthenticated ? (
+        renderRight={
+          <Stack direction="row" spacing={2}>
             <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => router.push('/documents/new')}
+              variant="outlined"
+              startIcon={<FileDownload />}
+              onClick={() => setBulkDownloadDialog(true)}
             >
-              Carica Nuovo
+              Download ZIP
             </Button>
-          ) : undefined
+            {isAuthenticated && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => router.push('/documents/new')}
+              >
+                Carica Nuovo
+              </Button>
+            )}
+          </Stack>
         }
       />
 
@@ -665,6 +702,68 @@ export default function DocumentsPage() {
               Scarica
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog Bulk Download */}
+      <Dialog
+        open={bulkDownloadDialog}
+        onClose={() => setBulkDownloadDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Download ZIP Documenti</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Scarica più documenti in formato ZIP. Puoi filtrare per fornitore e/o periodo.
+          </Typography>
+
+          <Stack spacing={3}>
+            <Autocomplete
+              options={allSuppliers}
+              value={bulkSupplier}
+              onChange={(_, newValue) => setBulkSupplier(newValue || '')}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Fornitore (opzionale)"
+                  placeholder="Seleziona fornitore"
+                />
+              )}
+            />
+
+            <TextField
+              label="Data da"
+              type="date"
+              value={bulkDateFrom}
+              onChange={(e) => setBulkDateFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+
+            <TextField
+              label="Data a"
+              type="date"
+              value={bulkDateTo}
+              onChange={(e) => setBulkDateTo(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+
+            <Typography variant="caption" color="text.secondary">
+              Lascia i campi vuoti per scaricare tutti i documenti. I file saranno organizzati per fornitore/anno/mese.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDownloadDialog(false)}>Annulla</Button>
+          <Button
+            variant="contained"
+            startIcon={<FileDownload />}
+            onClick={handleBulkDownload}
+          >
+            Scarica ZIP
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

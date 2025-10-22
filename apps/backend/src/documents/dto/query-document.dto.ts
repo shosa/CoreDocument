@@ -23,6 +23,14 @@ export class QueryDocumentDto {
   @Type(() => Number)
   year?: number;
 
+  @IsString()
+  @IsOptional()
+  dateFrom?: string;
+
+  @IsString()
+  @IsOptional()
+  dateTo?: string;
+
   @IsNumber()
   @IsOptional()
   @Type(() => Number)

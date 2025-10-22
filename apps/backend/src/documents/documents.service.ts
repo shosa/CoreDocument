@@ -5,6 +5,8 @@ import { MeilisearchService } from '../meilisearch/meilisearch.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { QueryDocumentDto } from './dto/query-document.dto';
+import archiver from 'archiver';
+import { Readable } from 'stream';
 
 @Injectable()
 export class DocumentsService {
@@ -202,6 +204,17 @@ export class DocumentsService {
       where.year = query.year;
     }
 
+    // Range di date per bulk download
+    if (query.dateFrom || query.dateTo) {
+      where.date = {};
+      if (query.dateFrom) {
+        where.date.gte = new Date(query.dateFrom);
+      }
+      if (query.dateTo) {
+        where.date.lte = new Date(query.dateTo);
+      }
+    }
+
     const [documents, total] = await Promise.all([
       this.prisma.document.findMany({
         where,
@@ -375,5 +388,51 @@ export class DocumentsService {
     }
 
     return { stream, fileName: document.filename, mimeType };
+  }
+
+  async bulkDownloadZip(query: QueryDocumentDto) {
+    // Usa findAll per ottenere i documenti filtrati
+    const result = await this.findAll(query);
+    const documents = Array.isArray(result) ? result : result.data || [];
+
+    if (documents.length === 0) {
+      throw new NotFoundException('Nessun documento trovato con i filtri specificati');
+    }
+
+    // Crea lo stream ZIP
+    const archive = archiver('zip', {
+      zlib: { level: 9 }, // Massima compressione
+    });
+
+    // Gestione errori
+    archive.on('error', (err) => {
+      throw err;
+    });
+
+    // Aggiungi ogni documento allo ZIP
+    for (const doc of documents) {
+      try {
+        const fileStream = await this.minio.getFileStream(doc.minioKey);
+
+        // Converti lo stream in buffer per evitare problemi con archiver
+        const chunks: Buffer[] = [];
+        for await (const chunk of fileStream) {
+          chunks.push(chunk);
+        }
+        const fileBuffer = Buffer.concat(chunks);
+
+        // Crea una struttura di cartelle: fornitore/anno/mese/file
+        const folderPath = `${doc.supplier}/${doc.year}/${doc.month}`;
+        archive.append(fileBuffer, { name: `${folderPath}/${doc.filename}` });
+      } catch (error) {
+        console.error(`Errore scaricando file ${doc.filename}:`, error);
+        // Continua con gli altri file anche se uno fallisce
+      }
+    }
+
+    // Finalizza lo ZIP
+    archive.finalize();
+
+    return archive;
   }
 }
