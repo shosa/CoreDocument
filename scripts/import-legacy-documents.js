@@ -27,7 +27,7 @@ const { program } = require('commander');
 // ============================================================================
 
 const DEFAULT_CONFIG = {
-  sourcePath: 'Y:\\',
+  sourcePath: '/mnt/DOCUMENTI',
   apiUrl: 'http://localhost:81/api',
   authToken: process.env.COREDOCUMENT_JWT_TOKEN || '',
   batchSize: 20, // Ridotto a 20 per evitare timeout
