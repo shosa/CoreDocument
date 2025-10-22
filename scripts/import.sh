@@ -80,10 +80,12 @@ echo ""
 echo "Avvio import..."
 echo ""
 
+# Esporta la variabile per lo script Node
+export COREDOCUMENT_JWT_TOKEN="$JWT_TOKEN"
+
 node import-legacy-documents.js \
     --source "$SOURCE_PATH" \
     --api-url "$API_URL" \
-    --token "$JWT_TOKEN" \
     --batch-size $BATCH_SIZE \
     --verbose
 
