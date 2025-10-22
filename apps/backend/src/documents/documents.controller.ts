@@ -99,4 +99,18 @@ export class DocumentsController {
 
     return new StreamableFile(stream);
   }
+
+  @Get(':id/view')
+  // Accesso pubblico - nessun guard
+  async view(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    const { stream, fileName, mimeType } = await this.documentsService.getFileStream(id);
+
+    res.set({
+      'Content-Type': mimeType || 'application/pdf',
+      'Content-Disposition': `inline; filename="${fileName}"`,
+      'Cache-Control': 'public, max-age=3600',
+    });
+
+    return new StreamableFile(stream);
+  }
 }

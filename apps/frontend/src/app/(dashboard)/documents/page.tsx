@@ -214,8 +214,9 @@ export default function DocumentsPage() {
   const handlePreview = async (doc: Document) => {
     try {
       setPreviewDoc(doc);
-      const response = await documentsApi.getDownloadUrl(doc.id);
-      setPreviewUrl(response.data.url);
+      // Usa l'endpoint /api/documents/:id/view che fa da proxy
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
+      setPreviewUrl(`${apiUrl}/documents/${doc.id}/view`);
     } catch (error) {
       enqueueSnackbar('Errore nel caricamento anteprima', { variant: 'error' });
     }

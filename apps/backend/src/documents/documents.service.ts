@@ -351,6 +351,29 @@ export class DocumentsService {
   async getFileStream(id: string) {
     const document = await this.findOne(id);
     const stream = await this.minio.getFileStream(document.minioKey);
-    return { stream, fileName: document.filename };
+
+    // Determina il MIME type dall'estensione del file
+    const ext = document.fileExtension?.toLowerCase();
+    let mimeType = 'application/octet-stream';
+
+    const mimeMap: Record<string, string> = {
+      'pdf': 'application/pdf',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'txt': 'text/plain',
+    };
+
+    if (ext && mimeMap[ext]) {
+      mimeType = mimeMap[ext];
+    }
+
+    return { stream, fileName: document.filename, mimeType };
   }
 }
