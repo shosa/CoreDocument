@@ -16,10 +16,11 @@ export default function Widget({ title, children, action, elevation = 0, sx }: W
     <Paper
       elevation={elevation}
       sx={{
-        p: 3,
+        p: { xs: 2, sm: 2.5, md: 3 },
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
         ...sx,
       }}
     >
@@ -27,20 +28,27 @@ export default function Widget({ title, children, action, elevation = 0, sx }: W
         <Box
           sx={{
             display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: { xs: 'flex-start', sm: 'center' },
             mb: title ? 2 : 0,
+            gap: { xs: 1, sm: 0 },
           }}
         >
           {title && (
-            <Typography variant="h6" component="h2" fontWeight={600}>
+            <Typography
+              variant="h6"
+              component="h2"
+              fontWeight={600}
+              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               {title}
             </Typography>
           )}
           {action && <Box>{action}</Box>}
         </Box>
       )}
-      <Box sx={{ flex: 1 }}>{children}</Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
     </Paper>
   );
 }

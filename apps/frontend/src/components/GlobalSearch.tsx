@@ -125,14 +125,14 @@ export default function GlobalSearch() {
   };
 
   return (
-    <Box ref={searchRef} sx={{ position: 'relative', width: '100%', maxWidth: 600 }}>
+    <Box ref={searchRef} sx={{ position: 'relative', width: '100%', maxWidth: { xs: '100%', sm: 600 } }}>
       <Paper
         elevation={0}
         sx={{
           display: 'flex',
           alignItems: 'center',
-          px: 2,
-          py: 0.75,
+          px: { xs: 1.5, sm: 2 },
+          py: { xs: 0.5, sm: 0.75 },
           bgcolor: 'white',
           borderRadius: 2,
           border: '1px solid',
@@ -146,15 +146,16 @@ export default function GlobalSearch() {
           },
         }}
       >
-        <Search sx={{ color: 'text.secondary', mr: 1 }} />
+        <Search sx={{ color: 'text.secondary', mr: { xs: 0.5, sm: 1 }, fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
         <InputBase
-          placeholder="Cerca documenti, fornitori..."
+          placeholder="Cerca..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.length >= 2 && setOpen(true)}
           sx={{
             flex: 1,
             color: 'text.primary',
+            fontSize: { xs: '0.875rem', sm: '1rem' },
             '& ::placeholder': {
               color: 'text.secondary',
               opacity: 0.7,

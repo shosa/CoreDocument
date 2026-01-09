@@ -315,17 +315,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <AppBar
         position="fixed"
         sx={{
-          width: { md: `calc(100% - ${sidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH}px)` },
+          width: {
+            xs: '100%',
+            md: `calc(100% - ${sidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH}px)`
+          },
           ml: { md: `${sidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH}px` },
           boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
           <IconButton
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            sx={{ mr: { xs: 1, sm: 2 }, display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
@@ -337,7 +340,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
           </IconButton>
-          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', px: 2 }}>
+          <Box sx={{
+            flexGrow: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            px: { xs: 0, sm: 1, md: 2 },
+            minWidth: 0,
+          }}>
             <GlobalSearch />
           </Box>
         </Toolbar>
@@ -392,14 +401,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         component="main"
         sx={{
           flexGrow: 1,
-          width: { md: `calc(100% - ${sidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH}px)` },
-          mt: 8,
+          width: {
+            xs: '100%',
+            md: `calc(100% - ${sidebarCollapsed ? COLLAPSED_DRAWER_WIDTH : DRAWER_WIDTH}px)`
+          },
+          mt: { xs: 7, sm: 8 },
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
+          minWidth: 0,
         }}
       >
-        <Box sx={{ flexGrow: 1, p: 3 }}>{children}</Box>
+        <Box sx={{
+          flexGrow: 1,
+          p: { xs: 2, sm: 2.5, md: 3 },
+          overflow: 'auto',
+        }}>
+          {children}
+        </Box>
 
       </Box>
 
